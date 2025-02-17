@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>World3 Simulation Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .plot-container {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>World3 Simulation Results</h1>
+    <h2>Comparing Baseline vs Global Carbon Reward Scenarios</h2>
+    
+    <div class="plot-container">
+        <div id="population-plot"></div>
+    </div>
+    
+    <div class="plot-container">
+        <div id="industrial-output-plot"></div>
+    </div>
+    
+    <div class="plot-container">
+        <div id="pollution-plot"></div>
+    </div>
+
+    <script>
+        // Create plots from JSON data
+        var plots = {{ plots | safe }};
+        
+        Plotly.newPlot('population-plot', 
+                       JSON.parse(plots.population));
+        Plotly.newPlot('industrial-output-plot',
+                       JSON.parse(plots.industrial_output));
+        Plotly.newPlot('pollution-plot',
+                       JSON.parse(plots.pollution));
+    </script>
+</body>
+</html>
