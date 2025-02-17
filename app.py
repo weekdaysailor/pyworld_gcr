@@ -22,7 +22,9 @@ def run_simulations():
             dt=0.5,
             target_population=8000
         )
+        print("Running baseline simulation...")
         baseline_results = baseline_model.run_simulation()
+        print("Baseline simulation complete")
 
         # Run GCR simulation
         gcr_model = GCRModel(
@@ -32,15 +34,21 @@ def run_simulations():
             reward_start_year=2025,
             target_population=8000
         )
+        print("Running GCR simulation...")
         gcr_results = gcr_model.run_simulation()
+        print("GCR simulation complete")
 
         # Generate Plotly figures
         global simulation_figures
+        print("Generating visualization...")
         simulation_figures = create_simulation_dashboard(gcr_results, baseline_results)
         print("Simulations completed successfully")
         return True
     except Exception as e:
+        import traceback
         print(f"Error during simulations: {str(e)}")
+        print("Traceback:")
+        print(traceback.format_exc())
         return False
 
 @app.route('/')
@@ -80,6 +88,8 @@ def run_new_simulation():
 if __name__ == '__main__':
     # Create output directory if it doesn't exist
     os.makedirs('myworld3/output', exist_ok=True)
+    os.makedirs('.config/matplotlib', exist_ok=True)  # Required for matplotlib
     # Run initial simulation
-    run_simulations()
+    if not run_simulations():
+        print("WARNING: Initial simulation failed, but server will still start")
     app.run(host='0.0.0.0', port=8088, debug=True)
