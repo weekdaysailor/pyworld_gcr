@@ -7,22 +7,72 @@
         <p class="lead">
             Exploring global environmental and societal modeling scenarios through interactive visualization
         </p>
+        <button id="runSimulation" class="btn btn-primary mb-3">Run New Simulation</button>
     </div>
 </div>
 
 <div class="row">
-    <div class="col">
-        <h2>Population Comparison</h2>
-        <iframe src="/static/output/population_comparison_new.html" width="100%" height="600" frameborder="0"></iframe>
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div id="populationPlot" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <h2>Industrial Output Comparison</h2>
-        <iframe src="/static/output/industrial_output_comparison_new.html" width="100%" height="600" frameborder="0"></iframe>
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div id="industrialPlot" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
-        <h2>Pollution Comparison</h2>
-        <iframe src="/static/output/pollution_comparison_new.html" width="100%" height="600" frameborder="0"></iframe>
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <div id="pollutionPlot" style="height: 500px;"></div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize plots
+    Plotly.newPlot('populationPlot', {{ plots.population | safe }});
+    Plotly.newPlot('industrialPlot', {{ plots.industrial | safe }});
+    Plotly.newPlot('pollutionPlot', {{ plots.pollution | safe }});
+
+    // Handle new simulation button
+    document.getElementById('runSimulation').addEventListener('click', function() {
+        this.disabled = true;
+        this.textContent = 'Running...';
+
+        fetch('/run')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error running simulation: ' + error);
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.textContent = 'Run New Simulation';
+            });
+    });
+});
+</script>
 {% endblock %}
