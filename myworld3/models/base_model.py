@@ -23,17 +23,25 @@ class BaseModel:
 
     def initialize_model(self) -> None:
         """Initialize the World3 model with basic parameters."""
-        # Create World3 instance with time parameters
-        self.world3 = World3(
-            year_min=self.start_time,
-            year_max=self.stop_time,
-            dt=self.dt,
-            pyear=1975,  # Policy year
-            verbose=False
-        )
+        print("Initializing World3 model...")
+        try:
+            # Create World3 instance with time parameters
+            self.world3 = World3(
+                year_min=self.start_time,
+                year_max=self.stop_time,
+                dt=self.dt,
+                pyear=1975,  # Policy year
+                verbose=True  # Enable verbose mode for debugging
+            )
 
-        # Let World3 initialize its internal state
-        self.world3.set_world3_control()
+            # Initialize World3 state
+            print("Setting up World3 constants and variables...")
+            self.world3.init_world3_constants()
+            self.world3.init_world3_variables()
+
+        except Exception as e:
+            print(f"Error during World3 initialization: {str(e)}")
+            raise
 
     def run_simulation(self) -> pd.DataFrame:
         """Run the World3 simulation and return results.
@@ -42,19 +50,32 @@ class BaseModel:
             DataFrame containing simulation results
         """
         if self.world3 is None:
+            print("Initializing model before simulation...")
             self.initialize_model()
 
-        # Run simulation
-        self.world3.run_world3()
+        try:
+            print("Running World3 simulation...")
+            # Run simulation
+            self.world3.run_world3()
 
-        # Extract results into DataFrame
-        self.results = pd.DataFrame({
-            'population': self.world3.pop,  # Total population
-            'industrial_output': self.world3.io,  # Industrial output
-            'persistent_pollution_index': self.world3.ppi  # Pollution index
-        }, index=self.world3.t)
+            # Extract results into DataFrame
+            print("Processing simulation results...")
+            time_series = np.arange(self.start_time, self.stop_time + self.dt, self.dt)
 
-        return self.results
+            # Get all available variables
+            vars_dict = {
+                'population': self.world3.population,
+                'industrial_output': self.world3.industrial_output,
+                'persistent_pollution_index': self.world3.persistent_pollution_index
+            }
+
+            self.results = pd.DataFrame(vars_dict, index=time_series)
+            print("Simulation completed successfully.")
+            return self.results
+
+        except Exception as e:
+            print(f"Error during simulation: {str(e)}")
+            raise
 
     def get_variables(self) -> Dict[str, Any]:
         """Get all available variables in the model.
@@ -64,8 +85,13 @@ class BaseModel:
         """
         if self.world3 is None:
             return {}
-        return {
-            var: getattr(self.world3, var)
-            for var in dir(self.world3)
-            if not var.startswith('_') and not callable(getattr(self.world3, var))
-        }
+
+        try:
+            return {
+                var: getattr(self.world3, var)
+                for var in dir(self.world3)
+                if not var.startswith('_') and not callable(getattr(self.world3, var))
+            }
+        except Exception as e:
+            print(f"Error getting variables: {str(e)}")
+            return {}
