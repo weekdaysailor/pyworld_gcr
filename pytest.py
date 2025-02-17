@@ -8,8 +8,8 @@ def test_population():
 
     # Create model instance with 8 billion target population
     model = BaseModel(
-        start_time=1900,
-        stop_time=2100,
+        start_time=2025,
+        stop_time=2125,
         dt=0.5,
         target_population=8000  # 8 billion in millions
     )
@@ -19,7 +19,7 @@ def test_population():
 
     # Print population at key years
     print("\nPopulation at key years (millions):")
-    for year in [1900, 1950, 2000, 2050, 2100]:
+    for year in [2025, 2050, 2075, 2100, 2125]:
         idx = year
         pop = results.loc[idx, 'population']
         p1 = results.loc[idx, 'population_0_14']

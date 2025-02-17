@@ -6,12 +6,23 @@ import os
 
 def run_simulations():
     """Run both baseline and GCR simulations."""
-    # Run baseline simulation
-    baseline_model = BaseModel()
+    # Run baseline simulation with 8 billion population and 2025 start
+    baseline_model = BaseModel(
+        start_time=2025,
+        stop_time=2125,
+        dt=0.5,
+        target_population=8000  # 8 billion in millions
+    )
     baseline_results = baseline_model.run_simulation()
 
     # Run GCR simulation
-    gcr_model = GCRModel(reward_start_year=2025)
+    gcr_model = GCRModel(
+        start_time=2025,
+        stop_time=2125,
+        dt=0.5,
+        reward_start_year=2025,
+        target_population=8000
+    )
     gcr_results = gcr_model.run_simulation()
 
     return baseline_results, gcr_results
@@ -53,7 +64,7 @@ def main():
     # Generate interactive HTML comparisons
     plot_gcr_analysis(gcr_results, baseline_results, output_dir)
 
-    print("Visualization complete. Check the output directory for plots:")
+    print("\nVisualization complete. Check the output directory for plots:")
     print(f"- Static PNG plots in: {output_dir}")
     print("- Interactive HTML comparisons (with _new suffix):")
     print("  - Population: population_comparison_new.html")
