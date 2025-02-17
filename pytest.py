@@ -75,7 +75,7 @@ def test_population():
     print(f"\nInitial population (before modification): {world3.pop[0]}")
 
     # Modify initial population (double it)
-    world3.pop[0] *= 2
+    world3.pop[0] *= 8
     print(f"Modified population: {world3.pop[0]}")
 
     try:
