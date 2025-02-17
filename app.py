@@ -14,17 +14,7 @@ app.secret_key = os.urandom(24)
 @app.route('/view_plots.html')  # Add compatibility route
 def dashboard():
     """Render the main dashboard."""
-    # List available visualization files
-    visualizations = {
-        'Population': 'population_comparison_new.html',
-        'Industrial Output': 'industrial_output_comparison_new.html',
-        'Pollution': 'pollution_comparison_new.html',
-    }
-
-    return render_template(
-        'dashboard.html',
-        visualizations=visualizations
-    )
+    return render_template('dashboard.html')
 
 @app.route('/run')
 def run_simulation():
@@ -58,18 +48,6 @@ def run_simulation():
             'simulation.html',
             error=str(e)
         )
-
-@app.route('/output/<path:filename>')
-def serve_output(filename):
-    """Serve files from the output directory."""
-    # If it's an HTML file, try with _new suffix first
-    if filename.endswith('.html'):
-        base, ext = os.path.splitext(filename)
-        new_filename = f"{base}_new{ext}"
-        if os.path.exists(os.path.join(app.static_folder, new_filename)):
-            return send_from_directory(app.static_folder, new_filename)
-
-    return send_from_directory(app.static_folder, filename)
 
 if __name__ == '__main__':
     # Create output directory if it doesn't exist

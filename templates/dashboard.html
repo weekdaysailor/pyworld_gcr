@@ -11,49 +11,18 @@
 </div>
 
 <div class="row">
-    <div class="col-md-3">
-        <div class="list-group">
-            {% for title, file in visualizations.items() %}
-            <a href="#" class="list-group-item list-group-item-action visualization-link" 
-               data-viz="{{ file }}">{{ title }}</a>
-            {% endfor %}
-        </div>
-    </div>
-    <div class="col-md-9">
-        <div class="card">
-            <div class="card-body p-0">
-                <iframe id="visualization-frame" class="visualization-frame"></iframe>
-            </div>
-        </div>
+    <div class="col">
+        <h2>Population Comparison</h2>
+        <iframe src="/static/output/population_comparison_new.html" width="100%" height="600" frameborder="0"></iframe>
+
+        <h2>Industrial Output Comparison</h2>
+        <iframe src="/static/output/industrial_output_comparison_new.html" width="100%" height="600" frameborder="0"></iframe>
+
+        <h2>Pollution Comparison</h2>
+        <iframe src="/static/output/pollution_comparison_new.html" width="100%" height="600" frameborder="0"></iframe>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const frame = document.getElementById('visualization-frame');
-    const links = document.querySelectorAll('.visualization-link');
-
-    // Load first visualization by default
-    if (links.length > 0) {
-        const firstViz = links[0].getAttribute('data-viz');
-        frame.src = `/static/output/${firstViz}`;
-        links[0].classList.add('active');
-    }
-
-    // Handle visualization selection
-    links.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const vizFile = link.getAttribute('data-viz');
-            frame.src = `/static/output/${vizFile}`;
-
-            // Update active state
-            links.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-        });
-    });
-});
-</script>
 {% endblock %}
