@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col">
+        {% if error %}
+        <div class="alert alert-danger">
+            <h4>Simulation Error</h4>
+            <p>{{ error }}</p>
+        </div>
+        {% else %}
+        <div class="alert alert-success">
+            <h4>Success!</h4>
+            <p>{{ message }}</p>
+        </div>
+        {% endif %}
+        <a href="/" class="btn btn-primary">View Results</a>
+    </div>
+</div>
+{% endblock %}

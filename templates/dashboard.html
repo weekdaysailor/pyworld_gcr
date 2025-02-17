@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>World3 Simulation Results</h1>
+        <p class="lead">
+            Exploring global environmental and societal modeling scenarios through interactive visualization
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="list-group">
+            {% for title, file in visualizations.items() %}
+            <a href="#" class="list-group-item list-group-item-action visualization-link" 
+               data-viz="{{ file }}">{{ title }}</a>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-body p-0">
+                <iframe id="visualization-frame" class="visualization-frame"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const frame = document.getElementById('visualization-frame');
+    const links = document.querySelectorAll('.visualization-link');
+
+    // Load first visualization by default
+    if (links.length > 0) {
+        const firstViz = links[0].getAttribute('data-viz');
+        frame.src = `/static/output/${firstViz}`;
+        links[0].classList.add('active');
+    }
+
+    // Handle visualization selection
+    links.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const vizFile = link.getAttribute('data-viz');
+            frame.src = `/static/output/${vizFile}`;
+
+            // Update active state
+            links.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        });
+    });
+});
+</script>
+{% endblock %}

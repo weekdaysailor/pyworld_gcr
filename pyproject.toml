@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "World3 system dynamics simulation visualization"
 requires-python = ">=3.11"
 dependencies = [
+    "flask-login>=0.6.3",
     "matplotlib>=3.10.0",
     "numpy>=2.2.3",
+    "oauthlib>=3.2.2",
     "pandas>=2.2.3",
     "plotly>=6.0.0",
     "pyworld3==1.0.0",
