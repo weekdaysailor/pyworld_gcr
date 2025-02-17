@@ -15,7 +15,7 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         Dictionary containing Plotly figures
     """
     figures = {}
-    
+
     # Population comparison
     fig_pop = go.Figure()
     fig_pop.add_trace(go.Scatter(
@@ -28,14 +28,15 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         x=baseline_results.index,
         y=baseline_results['population'],
         name='Baseline',
-        line=dict(color='red')
+        line=dict(color='red', dash='dash')
     ))
     fig_pop.update_layout(
-        title='Population Comparison',
+        title='Global Population Projection',
         xaxis_title='Year',
         yaxis_title='Population (millions)',
         hovermode='x unified',
-        template='plotly_white'
+        template='plotly_white',
+        showlegend=True
     )
     figures['population'] = fig_pop
 
@@ -51,14 +52,15 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         x=baseline_results.index,
         y=baseline_results['industrial_output'],
         name='Baseline',
-        line=dict(color='red')
+        line=dict(color='red', dash='dash')
     ))
     fig_ind.update_layout(
-        title='Industrial Output Comparison',
+        title='Industrial Output Projection',
         xaxis_title='Year',
-        yaxis_title='Industrial Output',
+        yaxis_title='Industrial Output Index',
         hovermode='x unified',
-        template='plotly_white'
+        template='plotly_white',
+        showlegend=True
     )
     figures['industrial'] = fig_ind
 
@@ -74,14 +76,15 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         x=baseline_results.index,
         y=baseline_results['persistent_pollution_index'],
         name='Baseline',
-        line=dict(color='red')
+        line=dict(color='red', dash='dash')
     ))
     fig_pol.update_layout(
-        title='Pollution Index Comparison',
+        title='Pollution Index Projection',
         xaxis_title='Year',
         yaxis_title='Pollution Index',
         hovermode='x unified',
-        template='plotly_white'
+        template='plotly_white',
+        showlegend=True
     )
     figures['pollution'] = fig_pol
 

@@ -46,10 +46,18 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize plots
-    Plotly.newPlot('populationPlot', {{ plots.population | safe }});
-    Plotly.newPlot('industrialPlot', {{ plots.industrial | safe }});
-    Plotly.newPlot('pollutionPlot', {{ plots.pollution | safe }});
+    // Initialize plots if data is available
+    {% if plots.population %}
+    Plotly.newPlot('populationPlot', JSON.parse({{ plots.population | tojson }}));
+    {% endif %}
+
+    {% if plots.industrial %}
+    Plotly.newPlot('industrialPlot', JSON.parse({{ plots.industrial | tojson }}));
+    {% endif %}
+
+    {% if plots.pollution %}
+    Plotly.newPlot('pollutionPlot', JSON.parse({{ plots.pollution | tojson }}));
+    {% endif %}
 
     // Handle new simulation button
     document.getElementById('runSimulation').addEventListener('click', function() {

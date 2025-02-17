@@ -52,7 +52,7 @@ def dashboard():
             if not success:
                 return render_template('simulation.html', error="Failed to run simulations")
 
-        # Convert Plotly figures to JSON that can be rendered in the template
+        # Convert Plotly figures to JSON for template rendering
         plots = {
             'population': simulation_figures['population'].to_json() if 'population' in simulation_figures else None,
             'industrial': simulation_figures['industrial'].to_json() if 'industrial' in simulation_figures else None,
