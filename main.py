@@ -55,10 +55,10 @@ def main():
 
     print("Visualization complete. Check the output directory for plots:")
     print(f"- Static PNG plots in: {output_dir}")
-    print("- Interactive HTML comparisons:")
-    print("  - Population: population_comparison.html")
-    print("  - Industrial Output: industrial_output_comparison.html")
-    print("  - Pollution: pollution_comparison.html")
+    print("- Interactive HTML comparisons (with _new suffix):")
+    print("  - Population: population_comparison_new.html")
+    print("  - Industrial Output: industrial_output_comparison_new.html")
+    print("  - Pollution: pollution_comparison_new.html")
 
 if __name__ == '__main__':
     main()

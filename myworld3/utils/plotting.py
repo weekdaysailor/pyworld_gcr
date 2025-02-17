@@ -33,9 +33,12 @@ def create_time_series_plot(
     plt.grid(True)
 
     if save_path:
+        # Add _new suffix before the extension
+        base, ext = os.path.splitext(save_path)
+        new_path = f"{base}_new{ext}"
         # Ensure output directory exists
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        plt.savefig(save_path)
+        os.makedirs(os.path.dirname(new_path), exist_ok=True)
+        plt.savefig(new_path)
         plt.close()
     else:
         plt.show()
@@ -99,7 +102,7 @@ def plot_gcr_analysis(
         ['GCR Scenario', 'Baseline'],
         'Population Comparison'
     )
-    pop_fig.write_html(os.path.join(output_dir, 'population_comparison.html'))
+    pop_fig.write_html(os.path.join(output_dir, 'population_comparison_new.html'))
 
     # Industrial output comparison
     ind_fig = create_interactive_plot(
@@ -110,7 +113,7 @@ def plot_gcr_analysis(
         ['GCR Scenario', 'Baseline'],
         'Industrial Output Comparison'
     )
-    ind_fig.write_html(os.path.join(output_dir, 'industrial_output_comparison.html'))
+    ind_fig.write_html(os.path.join(output_dir, 'industrial_output_comparison_new.html'))
 
     # Pollution comparison
     pol_fig = create_interactive_plot(
@@ -121,4 +124,4 @@ def plot_gcr_analysis(
         ['GCR Scenario', 'Baseline'],
         'Pollution Index Comparison'
     )
-    pol_fig.write_html(os.path.join(output_dir, 'pollution_comparison.html'))
+    pol_fig.write_html(os.path.join(output_dir, 'pollution_comparison_new.html'))
