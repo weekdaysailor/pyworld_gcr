@@ -2,6 +2,7 @@
 from myworld3.models.base_model import BaseModel
 from myworld3.models.gcr_model import GCRModel
 from myworld3.utils.plotting import create_time_series_plot, plot_gcr_analysis
+import os
 
 def run_simulations():
     """Run both baseline and GCR simulations."""
@@ -20,13 +21,17 @@ def main():
     print("Running World3 simulations...")
     baseline_results, gcr_results = run_simulations()
 
-    # Create static plots
+    # Ensure output directory exists
+    output_dir = 'myworld3/output'
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Create static matplotlib plots
     create_time_series_plot(
         baseline_results,
         ['population'],
         'Population Over Time (Baseline)',
         'Population',
-        'myworld3/output/baseline_results_population_plot.png'
+        os.path.join(output_dir, 'baseline_results_population_plot.png')
     )
 
     create_time_series_plot(
@@ -34,7 +39,7 @@ def main():
         ['industrial_output'],
         'Industrial Output Over Time (Baseline)',
         'Output',
-        'myworld3/output/baseline_results_industrial_output_plot.png'
+        os.path.join(output_dir, 'baseline_results_industrial_output_plot.png')
     )
 
     create_time_series_plot(
@@ -42,15 +47,18 @@ def main():
         ['persistent_pollution_index'],
         'Pollution Over Time (Baseline)',
         'Pollution Index',
-        'myworld3/output/baseline_results_pollution_plot.png'
+        os.path.join(output_dir, 'baseline_results_pollution_plot.png')
     )
 
-    # Save comparative plots
-    figures = plot_gcr_analysis(gcr_results, baseline_results)
-    for name, fig in figures.items():
-        fig.write_image(f'myworld3/output/gcr_{name}_comparison.png')
+    # Generate interactive HTML comparisons
+    plot_gcr_analysis(gcr_results, baseline_results, output_dir)
 
-    print("Visualization complete. Check the output directory for plots.")
+    print("Visualization complete. Check the output directory for plots:")
+    print(f"- Static PNG plots in: {output_dir}")
+    print("- Interactive HTML comparisons:")
+    print("  - Population: population_comparison.html")
+    print("  - Industrial Output: industrial_output_comparison.html")
+    print("  - Pollution: pollution_comparison.html")
 
 if __name__ == '__main__':
     main()

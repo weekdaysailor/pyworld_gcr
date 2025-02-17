@@ -1,5 +1,5 @@
 """Global Carbon Reward model implementation."""
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Union
 import numpy as np
 import pandas as pd
 from .base_model import BaseModel
@@ -12,7 +12,8 @@ class GCRModel(BaseModel):
                  stop_time: int = 2100,
                  dt: float = 0.5,
                  reward_start_year: int = 2025,
-                 initial_reward_value: float = 100.0):
+                 initial_reward_value: float = 100.0,
+                 target_population: Optional[float] = None):
         """Initialize the GCR model.
 
         Args:
@@ -21,17 +22,19 @@ class GCRModel(BaseModel):
             dt: Time step for simulation
             reward_start_year: Year to start implementing GCR policy
             initial_reward_value: Initial value of carbon reward ($/tCO2e)
+            target_population: Target total population in millions for 2025 (if None, uses default)
         """
-        super().__init__(start_time, stop_time, dt)
+        super().__init__(start_time, stop_time, dt, target_population)
         self.reward_start_year = reward_start_year
         self.initial_reward_value = initial_reward_value
-        self.reward_history = []
+        self.reward_history: List[Dict[str, float]] = []
 
     def initialize_model(self) -> None:
         """Initialize the World3 model with GCR parameters."""
         super().initialize_model()
-        # Update policy year in World3 instance
-        self.world3.pyear = self.reward_start_year
+        if self.world3 is not None:
+            # Update policy year in World3 instance
+            self.world3.pyear = self.reward_start_year
 
     def calculate_reward(self, year: int, emissions: float) -> float:
         """Calculate carbon reward value for given year and emissions.
@@ -52,9 +55,9 @@ class GCRModel(BaseModel):
         reward = base_reward * emission_factor
 
         self.reward_history.append({
-            'year': year,
-            'reward_value': reward,
-            'emissions': emissions
+            'year': float(year),
+            'reward_value': float(reward),
+            'emissions': float(emissions)
         })
 
         return reward
@@ -70,7 +73,7 @@ class GCRModel(BaseModel):
         # Calculate and apply GCR effects
         for year in range(self.start_time, self.stop_time + 1):
             if year >= self.reward_start_year:
-                emissions = results.loc[year, 'industrial_output'] * 0.5  # Simplified emissions calculation
+                emissions = float(results.loc[year, 'industrial_output'] * 0.5)  # Simplified emissions calculation
                 reward = self.calculate_reward(year, emissions)
 
                 # Apply reward effects to industrial output
