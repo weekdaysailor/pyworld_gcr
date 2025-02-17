@@ -4,7 +4,6 @@ cd pyworld_gcr
 
 2. Install dependencies:
 The project uses Python 3.11 and requires the following packages:
-- flask
 - matplotlib
 - numpy
 - pandas
@@ -13,6 +12,6 @@ The project uses Python 3.11 and requires the following packages:
 
 ## Usage
 
-Run the visualization server:
+Run the visualization script:
 ```bash
 python main.py
