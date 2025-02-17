@@ -32,12 +32,18 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     ))
     fig_pop.update_layout(
         title='Global Population Projection',
-        xaxis_title='Year',
-        yaxis_title='Population (millions)',
+        xaxis_title='Years from 2025',
+        yaxis_title='Population (billions)',
+        xaxis=dict(tickmode='linear', tick0=0, dtick=20),
+        yaxis=dict(tickformat='.1f'),
         hovermode='x unified',
         template='plotly_white',
         showlegend=True
     )
+    # Convert x-axis to years from start
+    fig_pop.update_traces(x=lambda x: x - 2025)
+    # Convert y-axis to billions
+    fig_pop.update_traces(y=lambda y: y / 1000)
     figures['population'] = fig_pop
 
     # Industrial output comparison
@@ -56,12 +62,15 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     ))
     fig_ind.update_layout(
         title='Industrial Output Projection',
-        xaxis_title='Year',
+        xaxis_title='Years from 2025',
         yaxis_title='Industrial Output Index',
+        xaxis=dict(tickmode='linear', tick0=0, dtick=20),
         hovermode='x unified',
         template='plotly_white',
         showlegend=True
     )
+    # Convert x-axis to years from start
+    fig_ind.update_traces(x=lambda x: x - 2025)
     figures['industrial'] = fig_ind
 
     # Pollution comparison
@@ -80,12 +89,15 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     ))
     fig_pol.update_layout(
         title='Pollution Index Projection',
-        xaxis_title='Year',
+        xaxis_title='Years from 2025',
         yaxis_title='Pollution Index',
+        xaxis=dict(tickmode='linear', tick0=0, dtick=20),
         hovermode='x unified',
         template='plotly_white',
         showlegend=True
     )
+    # Convert x-axis to years from start
+    fig_pol.update_traces(x=lambda x: x - 2025)
     figures['pollution'] = fig_pol
 
     return figures
