@@ -1,6 +1,10 @@
 modules = ["python-3.11"]
 
 [[ports]]
+localPort = 3000
+externalPort = 3001
+
+[[ports]]
 localPort = 8080
 externalPort = 80
 
@@ -25,18 +29,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "World3 Visualization"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "World3 Population Test"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "World3 Visualization Server"
+args = "Flask Test App"
 
 [[workflows.workflow]]
-name = "World3 Visualization"
+name = "Flask Test App"
 author = "agent"
 
 [workflows.workflow.metadata]
@@ -47,36 +43,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python main.py"
-
-[[workflows.workflow]]
-name = "World3 Population Test"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python pytest.py"
-
-[[workflows.workflow]]
-name = "World3 Visualization Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python server.py"
-waitForPort = 8088
+args = "python test_app.py"
+waitForPort = 3000
 
 [deployment]
-run = ["sh", "-c", "python main.py"]
+run = ["sh", "-c", "python test_app.py"]
