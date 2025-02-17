@@ -39,6 +39,46 @@ class BaseModel:
             self.world3.init_world3_constants()
             self.world3.init_world3_variables()
 
+            # Initialize each subsystem
+            print("Initializing subsystems...")
+            # Population subsystem
+            self.world3.init_population_constants()
+            self.world3.init_population_variables()
+            self.world3.set_population_table_functions()
+            self.world3.set_population_delay_functions()
+
+            # Capital subsystem
+            self.world3.init_capital_constants()
+            self.world3.init_capital_variables()
+            self.world3.set_capital_table_functions()
+            self.world3.set_capital_delay_functions()
+
+            # Agriculture subsystem
+            self.world3.init_agriculture_constants()
+            self.world3.init_agriculture_variables()
+            self.world3.set_agriculture_table_functions()
+            self.world3.set_agriculture_delay_functions()
+
+            # Pollution subsystem
+            self.world3.init_pollution_constants()
+            self.world3.init_pollution_variables()
+            self.world3.set_pollution_table_functions()
+            self.world3.set_pollution_delay_functions()
+
+            # Resource subsystem
+            self.world3.init_resource_constants()
+            self.world3.init_resource_variables()
+            self.world3.set_resource_table_functions()
+            self.world3.set_resource_delay_functions()
+
+            # Initialize exogenous inputs
+            self.world3.init_exogenous_inputs()
+
+            # Set global World3 functions
+            print("Setting up World3 global functions...")
+            self.world3.set_world3_table_functions()
+            self.world3.set_world3_delay_functions()
+
         except Exception as e:
             print(f"Error during World3 initialization: {str(e)}")
             raise
@@ -64,9 +104,9 @@ class BaseModel:
 
             # Get all available variables
             vars_dict = {
-                'population': self.world3.population,
-                'industrial_output': self.world3.industrial_output,
-                'persistent_pollution_index': self.world3.persistent_pollution_index
+                'population': self.world3.pop,
+                'industrial_output': self.world3.io,
+                'persistent_pollution_index': self.world3.ppol
             }
 
             self.results = pd.DataFrame(vars_dict, index=time_series)
