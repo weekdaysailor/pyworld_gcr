@@ -19,14 +19,20 @@ class BaseModel:
         self.base_intensity = 2.5  # Base CO2e intensity per unit of industrial output
         self.tech_improvement_rate = 0.01  # 1% annual improvement in base technology
 
-        # Historical CO2 data (ppm) - Keeling curve extrapolated back to 1900
+        # Historical CO2 data (ppm) - Combined ice core and Mauna Loa measurements
         self.historical_co2 = {
-            1900: 295.0,  # Extrapolated from ice core data
+            1900: 296.0,  # From ice core data
+            1910: 299.2,
             1920: 303.0,
-            1940: 310.0,
+            1930: 306.8,
+            1940: 310.5,
+            1950: 311.3,
             1960: 316.91,  # Start of direct Mauna Loa measurements
+            1970: 325.68,
             1980: 338.91,
+            1990: 354.39,
             2000: 369.55,
+            2010: 389.90,
             2020: 414.72,
             2025: 421.50  # Recent measurements
         }
@@ -291,22 +297,38 @@ class BaseModel:
     def calculate_atmospheric_co2(self, year: int, cumulative_emissions: float) -> float:
         """Calculate atmospheric CO2 concentration in ppm."""
         try:
-            # Get historical value if available
+            # For historical period (up to 2025), use interpolation between known values
             if year <= 2025:
-                nearest_historical = min(self.historical_co2.keys(),
-                                        key=lambda x: abs(x - year))
-                return self.historical_co2[nearest_historical]
+                # Find the two closest years
+                years = sorted(self.historical_co2.keys())
+                lower_year = max([y for y in years if y <= year])
+                upper_year = min([y for y in years if y >= year])
 
-            # Project forward based on cumulative emissions
-            # Approximate conversion: 1 GtC ≈ 0.47 ppm CO2
+                # If exact year exists, return that value
+                if lower_year == upper_year:
+                    return self.historical_co2[year]
+
+                # Linear interpolation between closest points
+                lower_co2 = self.historical_co2[lower_year]
+                upper_co2 = self.historical_co2[upper_year]
+
+                # Calculate interpolated value
+                fraction = (year - lower_year) / (upper_year - lower_year)
+                return lower_co2 + (upper_co2 - lower_co2) * fraction
+
+            # For future projections (after 2025)
+            # Convert cumulative emissions to CO2 concentration increase
+            # Using conversion factors:
+            # 1 GtC ≈ 0.47 ppm CO2 in atmosphere
             # First convert Mt CO2e to GtC (divide by 3667 for molecular weight conversion)
             gtc_emissions = cumulative_emissions / 3667 / 1000
 
             # Calculate ppm increase from 2025 baseline
             ppm_increase = gtc_emissions * 0.47
 
-            # Add to 2025 baseline
+            # Add to 2025 baseline (last historical value)
             return self.historical_co2[2025] + float(ppm_increase)
+
         except Exception as e:
             print(f"Error calculating atmospheric CO2: {str(e)}")
             return self.historical_co2[1900]  # fallback to 1900 value
