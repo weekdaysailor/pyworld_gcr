@@ -23,8 +23,29 @@ class GCRModel(BaseModel):
         self.intensity_improvement_factor = 0.02  # Additional 2% annual improvement due to GCR
         self.sequestration_efficiency = 0.85  # 85% efficiency in carbon sequestration projects
         self.min_sequestration_years = 100  # Minimum years for carbon sequestration
-        self.natural_carbon_uptake = 0.1 # 10% natural carbon uptake
+        self.max_sequestration_rate = 0.05  # Maximum 5% of emissions can be sequestered annually
 
+    def calculate_xcc_sequestration(self, year: float, gross_emissions: float, reward: float) -> float:
+        """Calculate carbon sequestration from XCC projects."""
+        try:
+            if year < self.reward_start_year:
+                return 0.0
+
+            # Calculate potential sequestration based on reward value and time
+            years_active = year - self.reward_start_year
+            reward_factor = reward / self.initial_reward_value
+
+            # Sequestration capacity increases with time but has diminishing returns
+            capacity_factor = 1.0 - np.exp(-0.1 * years_active)
+
+            # Calculate sequestration potential
+            max_potential = gross_emissions * self.max_sequestration_rate
+            actual_sequestration = max_potential * capacity_factor * reward_factor * self.sequestration_efficiency
+
+            return float(actual_sequestration)
+        except Exception as e:
+            print(f"Error calculating XCC sequestration: {str(e)}")
+            return 0.0
 
     def calculate_emission_intensity(self, year: float, industrial_output: float) -> float:
         """Calculate emission intensity with GCR policy effects."""
@@ -50,26 +71,46 @@ class GCRModel(BaseModel):
             print(f"Error calculating emission intensity: {str(e)}")
             return self.base_intensity
 
-    def calculate_co2e_emissions(self, industrial_output: float, emission_intensity: float,
-                               pollution_index: float) -> float:
-        """Calculate CO2e emissions based on industrial output and current intensity."""
+    def calculate_co2e(self, year: int, industrial_output: float, pollution_index: float) -> Dict[str, float]:
+        """Calculate CO2e emissions components and net emissions with GCR effects."""
         try:
-            # Base emissions from industrial output
-            base_emissions = industrial_output * emission_intensity
+            # Get base emissions calculation from parent class
+            base_emissions = super().calculate_co2e(year, industrial_output, pollution_index)
 
-            # Additional emissions from pollution feedback
+            # For years before GCR policy starts, return base calculation
+            if year < self.reward_start_year:
+                return base_emissions
+
+            # Calculate GCR-specific emission intensity
+            gcr_intensity = self.calculate_emission_intensity(year, industrial_output)
+
+            # Recalculate gross emissions with GCR intensity
+            gross_emissions = industrial_output * gcr_intensity
+
+            # Add pollution effects
             pollution_factor = 1.0 + (pollution_index * 0.2)
+            total_emissions = gross_emissions * pollution_factor
 
-            # Account for natural carbon sinks and XCC sequestration
-            net_emissions = base_emissions * pollution_factor
+            # Calculate natural uptake with GCR effects
+            natural_uptake = total_emissions * self.natural_carbon_uptake
 
-            # Apply natural uptake (simplified carbon cycle)
-            natural_uptake = net_emissions * self.natural_carbon_uptake
+            # Calculate XCC sequestration (will be added during run_simulation)
+            # Here we just calculate the components
 
-            return float(net_emissions - natural_uptake)
+            return {
+                'gross_emissions': float(total_emissions),
+                'natural_uptake': float(natural_uptake),
+                'emission_intensity': float(gcr_intensity),
+                'net_emissions': float(total_emissions - natural_uptake),  # XCC sequestration added later
+            }
         except Exception as e:
-            print(f"Error calculating CO2e emissions: {str(e)}")
-            return 0.0
+            print(f"Error calculating GCR CO2e: {str(e)}")
+            return {
+                'gross_emissions': 0.0,
+                'natural_uptake': 0.0,
+                'emission_intensity': self.base_intensity,
+                'net_emissions': 0.0
+            }
 
     def calculate_reward(self, year: float, co2e_emissions: float, industrial_output: float, 
                         emission_intensity: float) -> float:
@@ -148,41 +189,58 @@ class GCRModel(BaseModel):
     def run_simulation(self) -> pd.DataFrame:
         """Run World3 simulation with GCR policy effects."""
         try:
-            # Run base simulation first
+            # Run base simulation to get initial results
             results = super().run_simulation()
 
-            # Initialize CO2e emissions column if not present
-            if 'co2e_emissions' not in results.columns:
-                results['co2e_emissions'] = 0.0
-            if 'emission_intensity' not in results.columns:
-                results['emission_intensity'] = 1.0
-
-            # Create time points array with proper dt steps
-            time_points = np.arange(self.start_time, self.stop_time + self.dt, self.dt)
-
-            # Apply GCR effects for each time point
-            for time in time_points:
-                # Get current time's metrics
+            # Process each timestep for GCR effects
+            for time in results.index:
+                # Get current metrics
                 industrial_output = float(results.loc[time, 'industrial_output'])
-
-                # Calculate emission intensity for current time
-                emission_intensity = self.calculate_emission_intensity(time, industrial_output)
-                results.loc[time, 'emission_intensity'] = emission_intensity
-
-                # Calculate CO2e emissions
                 pollution_index = float(results.loc[time, 'persistent_pollution_index'])
-                co2e_emissions = self.calculate_co2e_emissions(industrial_output, emission_intensity, pollution_index)
-                results.loc[time, 'co2e_emissions'] = co2e_emissions
 
-                # Calculate and apply GCR effects
-                reward = self.calculate_reward(time, co2e_emissions, industrial_output, emission_intensity)
+                # Get emissions data with GCR effects
+                emissions_data = self.calculate_co2e(
+                    int(time),
+                    industrial_output,
+                    pollution_index
+                )
+
+                # Calculate reward based on emissions
+                reward = self.calculate_reward(
+                    time,
+                    emissions_data['gross_emissions'],
+                    industrial_output,
+                    emissions_data['emission_intensity']
+                )
+
+                # Calculate XCC sequestration
+                xcc_seq = self.calculate_xcc_sequestration(
+                    time,
+                    emissions_data['gross_emissions'],
+                    reward
+                )
+
+                # Store all components
+                for key, value in emissions_data.items():
+                    results.loc[time, key] = value
+
+                results.loc[time, 'xcc_sequestration'] = xcc_seq
+
+                # Update net emissions to include XCC sequestration
+                results.loc[time, 'net_emissions'] = (
+                    emissions_data['gross_emissions'] -
+                    emissions_data['natural_uptake'] -
+                    xcc_seq
+                )
+
+                # Apply GCR effects to other variables
                 self.apply_gcr_effects(results, time, reward)
 
             return results
 
         except Exception as e:
             print(f"Error in GCR simulation: {str(e)}")
-            return super().run_simulation()
+            raise
 
     def get_reward_history(self) -> pd.DataFrame:
         """Get history of carbon rewards and their effects."""

@@ -20,7 +20,6 @@ class BaseModel:
         self.tech_improvement_rate = 0.01  # 1% annual improvement in base technology
 
         # Historical CO2 data (ppm) - Keeling curve extrapolated back to 1900
-        # Source: Combined ice core data and direct measurements
         self.historical_co2 = {
             1900: 295.0,  # Extrapolated from ice core data
             1920: 303.0,
@@ -45,25 +44,47 @@ class BaseModel:
         scale_factor = 1.0 + (np.log(industrial_output / 100) * 0.1)
         return float(self.base_intensity * tech_factor * scale_factor)
 
-    def calculate_co2e(self, year: int, industrial_output: float, pollution_index: float) -> float:
-        """Calculate CO2 equivalent emissions based on industrial output and pollution."""
-        # Get base intensity adjusted for technology and scale
-        intensity = self.calculate_emission_intensity(year, industrial_output)
+    def calculate_co2e(self, year: int, industrial_output: float, pollution_index: float) -> Dict[str, float]:
+        """Calculate CO2e emissions components and net emissions."""
+        try:
+            # Get base intensity adjusted for technology and scale
+            intensity = self.calculate_emission_intensity(year, industrial_output)
 
-        # Calculate base emissions
-        base_co2e = industrial_output * intensity
+            # Calculate gross emissions from industrial activity
+            gross_emissions = industrial_output * intensity
 
-        # Additional emissions from pollution feedback
-        pollution_multiplier = 1.0 + (pollution_index * 0.2)  # 20% increase per unit of pollution
+            # Additional emissions from pollution feedback
+            pollution_multiplier = 1.0 + (pollution_index * 0.2)
+            total_emissions = gross_emissions * pollution_multiplier
 
-        # Apply historical calibration for pre-2025 emissions
-        if year <= 2025:
-            nearest_historical = min(self.historical_co2.keys(), 
-                                  key=lambda x: abs(x - year))
-            historical_factor = self.historical_co2[nearest_historical] / self.historical_co2[1900]
-            return float(base_co2e * pollution_multiplier * historical_factor)
+            # Calculate natural carbon uptake
+            natural_uptake = total_emissions * self.natural_carbon_uptake
 
-        return float(base_co2e * pollution_multiplier)
+            # Apply historical calibration for pre-2025 emissions
+            if year <= 2025:
+                nearest_historical = min(self.historical_co2.keys(), 
+                                      key=lambda x: abs(x - year))
+                historical_factor = self.historical_co2[nearest_historical] / self.historical_co2[1900]
+                total_emissions *= historical_factor
+                natural_uptake *= historical_factor
+
+            # Calculate net emissions (no XCC sequestration in base model)
+            net_emissions = total_emissions - natural_uptake
+
+            return {
+                'gross_emissions': float(total_emissions),
+                'natural_uptake': float(natural_uptake),
+                'net_emissions': float(net_emissions),
+                'emission_intensity': float(intensity)
+            }
+        except Exception as e:
+            print(f"Error calculating CO2e: {str(e)}")
+            return {
+                'gross_emissions': 0.0,
+                'natural_uptake': 0.0,
+                'net_emissions': 0.0,
+                'emission_intensity': self.base_intensity
+            }
 
     def scale_population(self) -> None:
         """Scale population and related factors to match target population while maintaining balance."""
@@ -206,7 +227,7 @@ class BaseModel:
                 'population_15_44': self.world3.p2,
                 'population_45_64': self.world3.p3,
                 'population_65_plus': self.world3.p4,
-                'food_per_capita': self.world3.sfpc,  # Using correct attribute name
+                'food_per_capita': self.world3.sfpc,
                 'service_output_per_capita': self.world3.sopc,
                 'resources': self.world3.nrfr,
                 'life_expectancy': self.world3.le
@@ -215,23 +236,24 @@ class BaseModel:
             # Create initial DataFrame
             self.results = pd.DataFrame(vars_dict, index=time_series)
 
-            # Calculate emission intensity and CO2e for each timestep
-            self.results['emission_intensity'] = self.results.apply(
-                lambda row: self.calculate_emission_intensity(
-                    int(row.name),  # year
-                    row['industrial_output']
-                ),
-                axis=1
-            )
+            # Initialize emissions-related columns
+            self.results['gross_emissions'] = 0.0
+            self.results['natural_uptake'] = 0.0
+            self.results['net_emissions'] = 0.0
+            self.results['emission_intensity'] = 0.0
+            self.results['xcc_sequestration'] = 0.0  # Will remain 0 for base model
 
-            self.results['co2e_emissions'] = self.results.apply(
-                lambda row: self.calculate_co2e(
-                    int(row.name),  # year
-                    row['industrial_output'],
-                    row['persistent_pollution_index']
-                ),
-                axis=1
-            )
+            # Calculate emissions for each timestep
+            for time in time_series:
+                emissions_data = self.calculate_co2e(
+                    int(time),
+                    self.results.loc[time, 'industrial_output'],
+                    self.results.loc[time, 'persistent_pollution_index']
+                )
+
+                # Store all emission components
+                for key, value in emissions_data.items():
+                    self.results.loc[time, key] = value
 
             print("Simulation completed successfully.")
             return self.results

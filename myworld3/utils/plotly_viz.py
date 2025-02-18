@@ -14,47 +14,61 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     def convert_series(series):
         return [float(x) if isinstance(x, (np.floating, np.integer)) else x for x in series]
 
-    # CO2e emissions comparison with historical data
+    # CO2e emissions comparison with components
     fig_co2e = go.Figure()
 
-    # Plot baseline emissions
+    # Plot baseline net emissions
     fig_co2e.add_trace(go.Scatter(
         x=convert_series(baseline_results.index),
-        y=convert_series(baseline_results['co2e_emissions']),
-        name='Baseline Emissions',
-        line=dict(color='red', dash='dash')
+        y=convert_series(baseline_results['net_emissions']),
+        name='Baseline Net Emissions',
+        line=dict(color='red')
     ))
 
-    # Plot GCR scenario emissions
+    # Plot GCR scenario components
     fig_co2e.add_trace(go.Scatter(
         x=convert_series(gcr_results.index),
-        y=convert_series(gcr_results['co2e_emissions']),
-        name='GCR Scenario Emissions',
-        line=dict(color='blue')
+        y=convert_series(gcr_results['gross_emissions']),
+        name='GCR Gross Emissions',
+        line=dict(color='orange', dash='dot')
     ))
 
-    # Add emission intensity comparison
     fig_co2e.add_trace(go.Scatter(
         x=convert_series(gcr_results.index),
-        y=convert_series(gcr_results['emission_intensity']),
-        name='GCR Emission Intensity',
-        line=dict(color='green', dash='dot'),
-        yaxis='y2'
+        y=convert_series(gcr_results['natural_uptake']),
+        name='Natural Carbon Uptake',
+        line=dict(color='green', dash='dash')
     ))
 
-    # Update layout with dual y-axes
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(gcr_results.index),
+        y=convert_series(gcr_results['xcc_sequestration']),
+        name='XCC Sequestration',
+        line=dict(color='blue', dash='dash')
+    ))
+
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(gcr_results.index),
+        y=convert_series(gcr_results['net_emissions']),
+        name='GCR Net Emissions',
+        line=dict(color='purple')
+    ))
+
+    # Update layout
     fig_co2e.update_layout(
-        title='CO2e Emissions and Intensity Over Time',
+        title='CO2e Emissions Components Over Time',
         xaxis_title='Year',
-        yaxis_title='CO2e Emissions (Mt)',
-        yaxis2=dict(
-            title='Emission Intensity',
-            overlaying='y',
-            side='right'
-        ),
+        yaxis_title='CO2e (Mt)',
         hovermode='x unified',
         template='plotly_white',
-        showlegend=True
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
     )
 
     figures['co2e'] = fig_co2e.to_dict()
@@ -109,7 +123,6 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         showlegend=True
     )
     figures['industrial'] = fig_ind.to_dict()
-
 
 
     # Pollution comparison
