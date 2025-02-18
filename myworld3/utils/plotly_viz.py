@@ -40,22 +40,22 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         template='plotly_white',
         showlegend=True
     )
-    # Convert x-axis to years from start
-    fig_pop.update_traces(x=lambda x: x - 2025)
-    # Convert y-axis to billions
-    fig_pop.update_traces(y=lambda y: y / 1000)
+    # Convert x-axis to years from start and y-axis to billions
+    for trace in fig_pop.data:
+        trace.x = [x - 2025 for x in trace.x]
+        trace.y = [y / 1000 for y in trace.y]
     figures['population'] = fig_pop
 
     # Industrial output comparison
     fig_ind = go.Figure()
     fig_ind.add_trace(go.Scatter(
-        x=gcr_results.index,
+        x=[x - 2025 for x in gcr_results.index],
         y=gcr_results['industrial_output'],
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_ind.add_trace(go.Scatter(
-        x=baseline_results.index,
+        x=[x - 2025 for x in baseline_results.index],
         y=baseline_results['industrial_output'],
         name='Baseline',
         line=dict(color='red', dash='dash')
@@ -69,20 +69,18 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         template='plotly_white',
         showlegend=True
     )
-    # Convert x-axis to years from start
-    fig_ind.update_traces(x=lambda x: x - 2025)
     figures['industrial'] = fig_ind
 
     # Pollution comparison
     fig_pol = go.Figure()
     fig_pol.add_trace(go.Scatter(
-        x=gcr_results.index,
+        x=[x - 2025 for x in gcr_results.index],
         y=gcr_results['persistent_pollution_index'],
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_pol.add_trace(go.Scatter(
-        x=baseline_results.index,
+        x=[x - 2025 for x in baseline_results.index],
         y=baseline_results['persistent_pollution_index'],
         name='Baseline',
         line=dict(color='red', dash='dash')
@@ -96,8 +94,6 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         template='plotly_white',
         showlegend=True
     )
-    # Convert x-axis to years from start
-    fig_pol.update_traces(x=lambda x: x - 2025)
     figures['pollution'] = fig_pol
 
     return figures
