@@ -87,14 +87,16 @@ def dashboard():
                 if not success:
                     error_msg = "Failed to run simulations. Check server logs for details."
                     logger.error(error_msg)
-                    return render_template('dashboard.html', error=error_msg)
+                    # Pass empty dictionary as fallback for plots
+                    return render_template('dashboard.html', error=error_msg, plots={})
 
         logger.info("Rendering dashboard template")
         return render_template('dashboard.html', plots=simulation_figures)
     except Exception as e:
         error_msg = f"Error in dashboard route: {str(e)}"
         logger.error(error_msg, exc_info=True)
-        return render_template('dashboard.html', error=error_msg)
+        # Always provide plots parameter, even if empty
+        return render_template('dashboard.html', error=error_msg, plots={})
 
 @app.route('/run')
 def run_new_simulation():

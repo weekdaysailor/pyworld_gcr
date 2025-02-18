@@ -42,7 +42,7 @@ class BaseModel:
         return float(base_co2e * pollution_multiplier)
 
     def scale_population(self) -> None:
-        """Scale population cohorts to match target population while maintaining distribution."""
+        """Scale population and related factors to match target population while maintaining balance."""
         if self.target_population is None or self.world3 is None:
             return
 
@@ -50,32 +50,43 @@ class BaseModel:
         current_total = (self.world3.p1i + self.world3.p2i + 
                         self.world3.p3i + self.world3.p4i)
 
-        # Calculate scaling factor with proper formatting
+        # Calculate scaling factor
         scaling_factor = float(self.target_population) / float(current_total)
 
-        print(f"\nScaling population by factor: {scaling_factor:.4f}")
-        print("Initial population distribution:")
-        print(f"Ages 0-14:  {self.world3.p1i:.2f} million")
-        print(f"Ages 15-44: {self.world3.p2i:.2f} million")
-        print(f"Ages 45-64: {self.world3.p3i:.2f} million")
-        print(f"Ages 65+:   {self.world3.p4i:.2f} million")
-        print(f"Total:      {current_total:.2f} million")
+        print(f"\nScaling system by factor: {scaling_factor:.4f}")
+        print("Initial state:")
+        print(f"Population:        {current_total:.2f} million")
+        print(f"Industrial Output: {self.world3.ici:.2f}")
+        print(f"Food Production:   {self.world3.ali:.2f}")
+        print(f"Service Output:    {self.world3.sci:.2f}")
 
-        # Scale each cohort
-        self.world3.p1i = float(self.world3.p1i * scaling_factor)  # 0-14 years
-        self.world3.p2i = float(self.world3.p2i * scaling_factor)  # 15-44 years
-        self.world3.p3i = float(self.world3.p3i * scaling_factor)  # 45-64 years
-        self.world3.p4i = float(self.world3.p4i * scaling_factor)  # 65+ years
+        # Scale population cohorts
+        self.world3.p1i *= scaling_factor   # 0-14 years
+        self.world3.p2i *= scaling_factor   # 15-44 years
+        self.world3.p3i *= scaling_factor   # 45-64 years
+        self.world3.p4i *= scaling_factor   # 65+ years
 
+        # Scale industrial and agricultural systems
+        self.world3.ici *= scaling_factor * 0.9   # Industrial capital
+        self.world3.ali *= scaling_factor * 0.95  # Arable land
+        self.world3.sfpc *= 1.0                   # Food per capita remains constant (using correct attribute)
+
+        # Scale service sector and capital
+        self.world3.sci *= scaling_factor * 0.85  # Service capital
+
+        # Resource and pollution adjustments
+        self.world3.nri *= scaling_factor * 0.8   # Non-renewable resources
+        self.world3.ppolx *= scaling_factor * 0.7 # Persistent pollution
+
+        # Recalculate total population after scaling
         new_total = (self.world3.p1i + self.world3.p2i + 
                     self.world3.p3i + self.world3.p4i)
 
-        print("\nScaled population distribution:")
-        print(f"Ages 0-14:  {self.world3.p1i:.2f} million")
-        print(f"Ages 15-44: {self.world3.p2i:.2f} million")
-        print(f"Ages 45-64: {self.world3.p3i:.2f} million")
-        print(f"Ages 65+:   {self.world3.p4i:.2f} million")
-        print(f"Total:      {new_total:.2f} million")
+        print("\nScaled state:")
+        print(f"Population:        {new_total:.2f} million")
+        print(f"Industrial Output: {self.world3.ici:.2f}")
+        print(f"Food Production:   {self.world3.ali:.2f}")
+        print(f"Service Output:    {self.world3.sci:.2f}")
 
     def initialize_model(self) -> None:
         """Initialize the World3 model with basic parameters."""
@@ -105,10 +116,6 @@ class BaseModel:
             self.world3.init_pollution_constants()
             self.world3.init_resource_constants()
 
-            # Scale population if target is set (before variables initialization)
-            if self.target_population is not None:
-                self.scale_population()
-
             # Initialize variables after scaling
             print("\nInitializing subsystem variables...")
             self.world3.init_population_variables()
@@ -135,6 +142,10 @@ class BaseModel:
             print("Setting up World3 global functions...")
             self.world3.set_world3_table_functions()
             self.world3.set_world3_delay_functions()
+
+            # Scale population if target is set
+            if self.target_population is not None:
+                self.scale_population()
 
         except Exception as e:
             print(f"Error during World3 initialization: {str(e)}")
@@ -165,7 +176,7 @@ class BaseModel:
                 'population_15_44': self.world3.p2,
                 'population_45_64': self.world3.p3,
                 'population_65_plus': self.world3.p4,
-                'food_per_capita': self.world3.fpc,  # Changed from fpci to fpc
+                'food_per_capita': self.world3.sfpc,  # Using correct attribute name
                 'service_output_per_capita': self.world3.sopc,
                 'resources': self.world3.nrfr,
                 'life_expectancy': self.world3.le
