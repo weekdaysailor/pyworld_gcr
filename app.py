@@ -21,6 +21,11 @@ app.secret_key = os.urandom(24)
 # Store simulation results globally
 simulation_figures = {}
 
+@app.route('/health')
+def health_check():
+    """Simple health check endpoint."""
+    return jsonify({"status": "healthy"}), 200
+
 def run_simulations():
     """Run both baseline and GCR simulations."""
     try:
@@ -51,7 +56,13 @@ def run_simulations():
         # Generate Plotly figures
         global simulation_figures
         logger.info("Generating visualization...")
-        simulation_figures = create_simulation_dashboard(gcr_results, baseline_results)
+        try:
+            simulation_figures = create_simulation_dashboard(gcr_results, baseline_results)
+            logger.info("Successfully created dashboard figures")
+        except Exception as viz_error:
+            logger.error(f"Error creating dashboard: {str(viz_error)}", exc_info=True)
+            raise
+
         logger.info("Simulations completed successfully")
         return True
     except Exception as e:
@@ -67,14 +78,16 @@ def dashboard():
             logger.info("No simulation results found, running simulations...")
             success = run_simulations()
             if not success:
-                logger.error("Failed to run simulations")
-                return render_template('simulation.html', error="Failed to run simulations")
+                error_msg = "Failed to run simulations. Check server logs for details."
+                logger.error(error_msg)
+                return render_template('simulation.html', error=error_msg)
 
         logger.info("Rendering dashboard template")
         return render_template('dashboard.html', plots=simulation_figures)
     except Exception as e:
-        logger.error(f"Error in dashboard route: {str(e)}", exc_info=True)
-        return render_template('simulation.html', error=str(e))
+        error_msg = f"Error in dashboard route: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return render_template('simulation.html', error=error_msg)
 
 @app.route('/run')
 def run_new_simulation():
@@ -85,8 +98,9 @@ def run_new_simulation():
             return jsonify({'status': 'success', 'message': 'Simulation completed successfully'})
         return jsonify({'status': 'error', 'message': 'Failed to run simulations'}), 500
     except Exception as e:
-        logger.error(f"Error in run_new_simulation route: {str(e)}", exc_info=True)
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        error_msg = f"Error in run_new_simulation route: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return jsonify({'status': 'error', 'message': error_msg}), 500
 
 if __name__ == '__main__':
     try:
@@ -98,8 +112,9 @@ if __name__ == '__main__':
         if not run_simulations():
             logger.warning("Initial simulation failed, but server will still start")
 
-        logger.info(f'Starting Flask server on port 8088...')
-        app.run(host='0.0.0.0', port=8088, debug=True)
+        port = int(os.environ.get('PORT', 8088))
+        logger.info(f'Starting Flask server on port {port}...')
+        app.run(host='0.0.0.0', port=port, debug=True)
     except Exception as e:
         logger.error(f'Failed to start Flask app: {str(e)}', exc_info=True)
         raise

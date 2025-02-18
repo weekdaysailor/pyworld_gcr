@@ -4,6 +4,7 @@ from plotly.subplots import make_subplots
 import pandas as pd
 from typing import Dict, List
 import json
+import numpy as np
 
 def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.DataFrame) -> Dict[str, dict]:
     """Create interactive Plotly dashboard figures for simulation results.
@@ -17,17 +18,21 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     """
     figures = {}
 
+    # Convert index to Python list and ensure data is JSON serializable
+    time_gcr = [float(x) for x in gcr_results.index]
+    time_baseline = [float(x) for x in baseline_results.index]
+
     # Population comparison
     fig_pop = go.Figure()
     fig_pop.add_trace(go.Scatter(
-        x=gcr_results.index,
-        y=gcr_results['population'],
+        x=time_gcr,
+        y=[float(y) for y in gcr_results['population']],
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_pop.add_trace(go.Scatter(
-        x=baseline_results.index,
-        y=baseline_results['population'],
+        x=time_baseline,
+        y=[float(y) for y in baseline_results['population']],
         name='Baseline',
         line=dict(color='red', dash='dash')
     ))
@@ -50,14 +55,14 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     # Industrial output comparison
     fig_ind = go.Figure()
     fig_ind.add_trace(go.Scatter(
-        x=[x - 2025 for x in gcr_results.index],
-        y=gcr_results['industrial_output'],
+        x=[x - 2025 for x in time_gcr],
+        y=[float(y) for y in gcr_results['industrial_output']],
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_ind.add_trace(go.Scatter(
-        x=[x - 2025 for x in baseline_results.index],
-        y=baseline_results['industrial_output'],
+        x=[x - 2025 for x in time_baseline],
+        y=[float(y) for y in baseline_results['industrial_output']],
         name='Baseline',
         line=dict(color='red', dash='dash')
     ))
@@ -75,14 +80,14 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     # Pollution comparison
     fig_pol = go.Figure()
     fig_pol.add_trace(go.Scatter(
-        x=[x - 2025 for x in gcr_results.index],
-        y=gcr_results['persistent_pollution_index'],
+        x=[x - 2025 for x in time_gcr],
+        y=[float(y) for y in gcr_results['persistent_pollution_index']],
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_pol.add_trace(go.Scatter(
-        x=[x - 2025 for x in baseline_results.index],
-        y=baseline_results['persistent_pollution_index'],
+        x=[x - 2025 for x in time_baseline],
+        y=[float(y) for y in baseline_results['persistent_pollution_index']],
         name='Baseline',
         line=dict(color='red', dash='dash')
     ))

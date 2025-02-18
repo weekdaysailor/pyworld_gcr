@@ -36,49 +36,59 @@ class GCRModel(BaseModel):
             # Update policy year in World3 instance
             self.world3.pyear = self.reward_start_year
 
-    def calculate_reward(self, year: int, emissions: float) -> float:
-        """Calculate carbon reward value for given year and emissions.
-
-        Args:
-            year: Current simulation year
-            emissions: Current CO2 emissions level
-
-        Returns:
-            Calculated reward value
-        """
+    def calculate_reward(self, year: int, emissions: float, industrial_output: float) -> float:
+        """Calculate carbon reward value for given year and emissions."""
         if year < self.reward_start_year:
             return 0.0
 
-        # Simple reward calculation - can be made more sophisticated
-        base_reward = self.initial_reward_value
-        emission_factor = 1.0 + (emissions / 1000)  # Scale based on emissions
-        reward = base_reward * emission_factor
+        # Enhanced reward calculation with progressive scaling
+        years_since_start = year - self.reward_start_year
+        base_reward = self.initial_reward_value * (1 + years_since_start * 0.02)  # 2% annual increase
+
+        # Scale based on both emissions and industrial output with safe float conversion
+        emission_factor = 1.0 + (abs(float(emissions)) / 500)  # More aggressive scaling
+        industrial_factor = 1.0 + (abs(float(industrial_output)) / 1000)
+
+        reward = float(base_reward * emission_factor * industrial_factor)
 
         self.reward_history.append({
             'year': float(year),
-            'reward_value': float(reward),
+            'reward_value': reward,
             'emissions': float(emissions)
         })
 
         return reward
 
     def run_simulation(self) -> pd.DataFrame:
-        """Run World3 simulation with GCR policy effects.
-
-        Returns:
-            DataFrame containing simulation results with GCR impacts
-        """
+        """Run World3 simulation with GCR policy effects."""
         results = super().run_simulation()
 
-        # Calculate and apply GCR effects
+        # Apply GCR effects with enhanced impact
         for year in range(self.start_time, self.stop_time + 1):
             if year >= self.reward_start_year:
-                emissions = float(results.loc[year, 'industrial_output'] * 0.5)  # Simplified emissions calculation
-                reward = self.calculate_reward(year, emissions)
+                # Calculate emissions based on industrial output and pollution with safe float conversion
+                industrial_output = abs(float(results.loc[year, 'industrial_output']))
+                pollution_level = abs(float(results.loc[year, 'persistent_pollution_index']))
+                emissions = industrial_output * (0.5 + pollution_level * 0.1)  # Enhanced emissions calculation
 
-                # Apply reward effects to industrial output
-                modifier = 1.0 - (reward * 0.001)  # Simple linear impact
-                results.loc[year, 'industrial_output'] *= modifier
+                reward = self.calculate_reward(year, emissions, industrial_output)
+
+                # Enhanced impact calculations with stronger effects
+                industrial_modifier = max(0.1, 1.0 - (reward * 0.01))  # 1% reduction per reward unit, minimum 90% reduction
+                pollution_modifier = max(0.1, 1.0 - (reward * 0.015))  # 1.5% reduction per reward unit, minimum 90% reduction
+
+                # Apply modifiers with temporal delay
+                future_years = range(year, min(year + 5, self.stop_time + 1))
+                for future_year in future_years:
+                    # Gradual impact that increases over time
+                    time_factor = max(0, 1.0 - (0.2 * (future_year - year)))  # 20% reduction per year
+
+                    if time_factor > 0:
+                        current_industrial = float(results.loc[future_year, 'industrial_output'])
+                        current_pollution = float(results.loc[future_year, 'persistent_pollution_index'])
+
+                        results.loc[future_year, 'industrial_output'] = current_industrial * (industrial_modifier ** time_factor)
+                        results.loc[future_year, 'persistent_pollution_index'] = current_pollution * (pollution_modifier ** time_factor)
 
         return results
 
