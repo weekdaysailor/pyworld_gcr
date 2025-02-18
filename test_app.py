@@ -1,8 +1,14 @@
 from flask import Flask
 import logging
+import sys
+import os
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Configure logging with more detail
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -14,8 +20,10 @@ def hello():
 
 if __name__ == '__main__':
     try:
-        logger.info('Starting Flask application...')
-        app.run(host='0.0.0.0', port=3000, debug=True)
+        # Get port from environment variable with fallback to 3000
+        port = int(os.environ.get('PORT', 3000))
+        logger.info(f'Starting Flask application on port {port}...')
+        app.run(host='0.0.0.0', port=port, debug=True)
     except Exception as e:
         logger.error(f'Failed to start Flask app: {str(e)}')
         raise

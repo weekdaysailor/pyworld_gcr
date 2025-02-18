@@ -60,18 +60,7 @@ def dashboard():
             if not success:
                 return render_template('simulation.html', error="Failed to run simulations")
 
-        # Convert Plotly figures to JSON for template rendering
-        plots = {
-            'population': simulation_figures['population'].to_json() if 'population' in simulation_figures else None,
-            'industrial': simulation_figures['industrial'].to_json() if 'industrial' in simulation_figures else None,
-            'pollution': simulation_figures['pollution'].to_json() if 'pollution' in simulation_figures else None
-        }
-
-        # Check if we have valid plot data
-        if not any(plots.values()):
-            return render_template('simulation.html', error="No visualization data available")
-
-        return render_template('dashboard.html', plots=plots)
+        return render_template('dashboard.html', plots=simulation_figures)
     except Exception as e:
         return render_template('simulation.html', error=str(e))
 
@@ -88,7 +77,6 @@ def run_new_simulation():
 if __name__ == '__main__':
     # Create output directory if it doesn't exist
     os.makedirs('myworld3/output', exist_ok=True)
-    os.makedirs('.config/matplotlib', exist_ok=True)  # Required for matplotlib
     # Run initial simulation
     if not run_simulations():
         print("WARNING: Initial simulation failed, but server will still start")

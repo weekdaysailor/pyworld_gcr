@@ -3,8 +3,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
 from typing import Dict, List
+import json
 
-def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.DataFrame) -> Dict[str, go.Figure]:
+def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.DataFrame) -> Dict[str, dict]:
     """Create interactive Plotly dashboard figures for simulation results.
 
     Args:
@@ -12,7 +13,7 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         baseline_results: Results from baseline model
 
     Returns:
-        Dictionary containing Plotly figures
+        Dictionary containing Plotly figures as JSON-serializable dictionaries
     """
     figures = {}
 
@@ -44,7 +45,7 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     for trace in fig_pop.data:
         trace.x = [x - 2025 for x in trace.x]
         trace.y = [y / 1000 for y in trace.y]
-    figures['population'] = fig_pop
+    figures['population'] = fig_pop.to_dict()
 
     # Industrial output comparison
     fig_ind = go.Figure()
@@ -69,7 +70,7 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         template='plotly_white',
         showlegend=True
     )
-    figures['industrial'] = fig_ind
+    figures['industrial'] = fig_ind.to_dict()
 
     # Pollution comparison
     fig_pol = go.Figure()
@@ -94,6 +95,6 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         template='plotly_white',
         showlegend=True
     )
-    figures['pollution'] = fig_pol
+    figures['pollution'] = fig_pol.to_dict()
 
     return figures

@@ -48,15 +48,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize plots if data is available
     {% if plots.population %}
-    Plotly.newPlot('populationPlot', JSON.parse({{ plots.population | tojson }}));
+    Plotly.newPlot('populationPlot', {{ plots.population.data | tojson | safe }}, {{ plots.population.layout | tojson | safe }});
     {% endif %}
 
     {% if plots.industrial %}
-    Plotly.newPlot('industrialPlot', JSON.parse({{ plots.industrial | tojson }}));
+    Plotly.newPlot('industrialPlot', {{ plots.industrial.data | tojson | safe }}, {{ plots.industrial.layout | tojson | safe }});
     {% endif %}
 
     {% if plots.pollution %}
-    Plotly.newPlot('pollutionPlot', JSON.parse({{ plots.pollution | tojson }}));
+    Plotly.newPlot('pollutionPlot', {{ plots.pollution.data | tojson | safe }}, {{ plots.pollution.layout | tojson | safe }});
     {% endif %}
 
     // Handle new simulation button
