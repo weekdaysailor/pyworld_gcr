@@ -36,30 +36,27 @@ def main():
     output_dir = 'myworld3/output'
     os.makedirs(output_dir, exist_ok=True)
 
-    # Create static matplotlib plots
-    create_time_series_plot(
-        baseline_results,
-        ['population'],
-        'Population Over Time (Baseline)',
-        'Population',
-        os.path.join(output_dir, 'baseline_results_population_plot.png')
-    )
+    # List of metrics to plot
+    metrics = [
+        ('population', 'Population', 'Population (millions)'),
+        ('industrial_output', 'Industrial Output', 'Output Index'),
+        ('persistent_pollution_index', 'Pollution Index', 'Index Value'),
+        ('co2e_emissions', 'CO2e Emissions', 'CO2e (Mt)'),
+        ('food_per_capita', 'Food per Capita', 'Food Units'),
+        ('service_output_per_capita', 'Service Output per Capita', 'Service Units'),
+        ('resources', 'Non-Renewable Resources', 'Resource Units'),
+        ('life_expectancy', 'Life Expectancy', 'Years')
+    ]
 
-    create_time_series_plot(
-        baseline_results,
-        ['industrial_output'],
-        'Industrial Output Over Time (Baseline)',
-        'Output',
-        os.path.join(output_dir, 'baseline_results_industrial_output_plot.png')
-    )
-
-    create_time_series_plot(
-        baseline_results,
-        ['persistent_pollution_index'],
-        'Pollution Over Time (Baseline)',
-        'Pollution Index',
-        os.path.join(output_dir, 'baseline_results_pollution_plot.png')
-    )
+    # Create static matplotlib plots for each metric
+    for metric, title, ylabel in metrics:
+        create_time_series_plot(
+            baseline_results,
+            [metric],
+            f'{title} Over Time (Baseline)',
+            ylabel,
+            os.path.join(output_dir, f'baseline_results_{metric}_plot.png')
+        )
 
     # Generate interactive HTML comparisons
     plot_gcr_analysis(gcr_results, baseline_results, output_dir)
@@ -67,9 +64,8 @@ def main():
     print("\nVisualization complete. Check the output directory for plots:")
     print(f"- Static PNG plots in: {output_dir}")
     print("- Interactive HTML comparisons (with _new suffix):")
-    print("  - Population: population_comparison_new.html")
-    print("  - Industrial Output: industrial_output_comparison_new.html")
-    print("  - Pollution: pollution_comparison_new.html")
+    for metric, title, _ in metrics:
+        print(f"  - {title}: {metric}_comparison_new.html")
 
 if __name__ == '__main__':
     main()

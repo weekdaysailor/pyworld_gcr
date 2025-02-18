@@ -9,20 +9,37 @@ class BaseModel:
 
     def __init__(self, start_time: int = 1900, stop_time: int = 2100, dt: float = 0.5,
                  target_population: Optional[float] = None):
-        """Initialize the base model.
-
-        Args:
-            start_time: Start year for simulation
-            stop_time: End year for simulation
-            dt: Time step for simulation
-            target_population: Target total population in millions for 2025 (if None, uses default)
-        """
+        """Initialize the base model."""
         self.start_time = start_time
         self.stop_time = stop_time
         self.dt = dt
         self.target_population = target_population
         self.world3: Optional[World3] = None
         self.results: Optional[pd.DataFrame] = None
+        self.base_intensity = 2.5  # Base CO2e intensity per unit of industrial output
+        self.tech_improvement_rate = 0.01  # 1% annual improvement in base technology
+
+    def calculate_emission_intensity(self, year: int, industrial_output: float) -> float:
+        """Calculate emission intensity factor considering technological improvements."""
+        years_passed = year - self.start_time
+        # Technological improvement reduces base intensity over time
+        tech_factor = (1 - self.tech_improvement_rate) ** years_passed
+        # Scale factor based on industrial output (economies of scale)
+        scale_factor = 1.0 + (np.log(industrial_output / 100) * 0.1)
+        return float(self.base_intensity * tech_factor * scale_factor)
+
+    def calculate_co2e(self, year: int, industrial_output: float, pollution_index: float) -> float:
+        """Calculate CO2 equivalent emissions based on industrial output and pollution."""
+        # Get base intensity adjusted for technology and scale
+        intensity = self.calculate_emission_intensity(year, industrial_output)
+
+        # Calculate base emissions
+        base_co2e = industrial_output * intensity
+
+        # Additional emissions from pollution feedback
+        pollution_multiplier = 1.0 + (pollution_index * 0.2)  # 20% increase per unit of pollution
+
+        return float(base_co2e * pollution_multiplier)
 
     def scale_population(self) -> None:
         """Scale population cohorts to match target population while maintaining distribution."""
@@ -104,16 +121,12 @@ class BaseModel:
             print("Setting up subsystem functions...")
             self.world3.set_population_table_functions()
             self.world3.set_population_delay_functions()
-
             self.world3.set_capital_table_functions()
             self.world3.set_capital_delay_functions()
-
             self.world3.set_agriculture_table_functions()
             self.world3.set_agriculture_delay_functions()
-
             self.world3.set_pollution_table_functions()
             self.world3.set_pollution_delay_functions()
-
             self.world3.set_resource_table_functions()
             self.world3.set_resource_delay_functions()
 
@@ -143,6 +156,7 @@ class BaseModel:
             print("Processing simulation results...")
             time_series = np.arange(self.start_time, self.stop_time + self.dt, self.dt)
 
+            # Base variables - using correct attribute names from PyWorld3
             vars_dict = {
                 'population': self.world3.pop,
                 'industrial_output': self.world3.io,
@@ -150,10 +164,34 @@ class BaseModel:
                 'population_0_14': self.world3.p1,
                 'population_15_44': self.world3.p2,
                 'population_45_64': self.world3.p3,
-                'population_65_plus': self.world3.p4
+                'population_65_plus': self.world3.p4,
+                'food_per_capita': self.world3.fpc,  # Changed from fpci to fpc
+                'service_output_per_capita': self.world3.sopc,
+                'resources': self.world3.nrfr,
+                'life_expectancy': self.world3.le
             }
 
+            # Create initial DataFrame
             self.results = pd.DataFrame(vars_dict, index=time_series)
+
+            # Calculate emission intensity and CO2e for each timestep
+            self.results['emission_intensity'] = self.results.apply(
+                lambda row: self.calculate_emission_intensity(
+                    int(row.name),  # year
+                    row['industrial_output']
+                ),
+                axis=1
+            )
+
+            self.results['co2e_emissions'] = self.results.apply(
+                lambda row: self.calculate_co2e(
+                    int(row.name),  # year
+                    row['industrial_output'],
+                    row['persistent_pollution_index']
+                ),
+                axis=1
+            )
+
             print("Simulation completed successfully.")
             return self.results
 

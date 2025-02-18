@@ -31,6 +31,10 @@ author = "agent"
 task = "workflow.run"
 args = "World3 Dashboard"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "World3 Test"
+
 [[workflows.workflow]]
 name = "World3 Dashboard"
 author = "agent"
@@ -45,6 +49,20 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python app.py"
 waitForPort = 8088
+
+[[workflows.workflow]]
+name = "World3 Test"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
