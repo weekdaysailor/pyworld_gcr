@@ -33,30 +33,44 @@ def run_simulations(xcc_price=100.0):
     try:
         logger.info("Starting simulations...")
         logger.info(f"Using XCC price: {xcc_price}")
+        logger.info("Configuration: start_time=1900, stop_time=2100, dt=0.5")
 
         # Run baseline simulation
         baseline_model = BaseModel(
-            start_time=2025,
-            stop_time=2125,
+            start_time=1900,
+            stop_time=2100,
             dt=0.5,
-            target_population=8000
+            target_population=0  # Keep original population values
         )
         logger.info("Running baseline simulation...")
         baseline_results = baseline_model.run_simulation()
         logger.info("Baseline simulation complete")
 
+        # Log some basic statistics about the baseline results
+        logger.info("Baseline simulation statistics:")
+        logger.info(f"Number of timepoints: {len(baseline_results)}")
+        logger.info(f"Population range: {baseline_results['population'].min():.2f} to {baseline_results['population'].max():.2f}")
+        logger.info(f"Industrial output range: {baseline_results['industrial_output'].min():.2f} to {baseline_results['industrial_output'].max():.2f}")
+
         # Run GCR simulation with specified XCC price
         gcr_model = GCRModel(
-            start_time=2025,
-            stop_time=2125,
+            start_time=1900,
+            stop_time=2100,
             dt=0.5,
-            reward_start_year=2025,
+            reward_start_year=2030,
             initial_reward_value=xcc_price,
-            target_population=8000
+            target_population=0  # Keep original population values
         )
         logger.info("Running GCR simulation...")
+        logger.info(f"GCR policy starts in: 2030")
         gcr_results = gcr_model.run_simulation()
         logger.info("GCR simulation complete")
+
+        # Log some basic statistics about the GCR results
+        logger.info("GCR simulation statistics:")
+        logger.info(f"Number of timepoints: {len(gcr_results)}")
+        logger.info(f"Population range: {gcr_results['population'].min():.2f} to {gcr_results['population'].max():.2f}")
+        logger.info(f"Industrial output range: {gcr_results['industrial_output'].min():.2f} to {gcr_results['industrial_output'].max():.2f}")
 
         # Generate Plotly figures with thread safety
         logger.info("Generating visualization...")

@@ -7,22 +7,9 @@ from pyworld3 import World3
 class BaseModel:
     """Base class for World3-based models."""
 
-    def __init__(self, start_time: int = 2025, stop_time: int = 2125, dt: float = 0.5,
-                 target_population: Optional[float] = None):
-        """Initialize the base model with normalized time scale."""
-        # Validate time parameters
-        if start_time < 2025:
-            print(f"Warning: Adjusting start_time from {start_time} to minimum allowed year 2025")
-            start_time = 2025
-
-        if stop_time <= start_time:
-            print(f"Warning: Adjusting stop_time to be 100 years after start_time")
-            stop_time = start_time + 100
-
-        if dt <= 0:
-            print("Warning: Invalid dt value, setting to default 0.5")
-            dt = 0.5
-
+    def __init__(self, start_time: int = 1900, stop_time: int = 2100, dt: float = 0.5,
+                 target_population: Optional[float] = 0): # Updated to default to 0
+        """Initialize the base model."""
         self.start_time = start_time
         self.stop_time = stop_time
         self.dt = dt
@@ -63,15 +50,21 @@ class BaseModel:
         current_total = (self.world3.p1i + self.world3.p2i + 
                         self.world3.p3i + self.world3.p4i)
 
-        # Calculate scaling factor
-        scaling_factor = float(self.target_population) / float(current_total)
-
-        print(f"\nScaling system by factor: {scaling_factor:.4f}")
-        print("Initial state:")
+        print(f"\nInitial state before scaling:")
         print(f"Population:        {current_total:.2f} million")
         print(f"Industrial Output: {self.world3.ici:.2f}")
         print(f"Food Production:   {self.world3.ali:.2f}")
         print(f"Service Output:    {self.world3.sci:.2f}")
+
+        # If target population is 0, keep original values
+        if self.target_population == 0:
+            print("\nSkipping population scaling (target = 0)")
+            return
+
+        # Calculate scaling factor with safety check
+        scaling_factor = float(self.target_population) / float(current_total) if current_total > 0 else 1.0
+
+        print(f"\nScaling system by factor: {scaling_factor:.4f}")
 
         # Scale population cohorts
         self.world3.p1i *= scaling_factor   # 0-14 years
@@ -82,7 +75,7 @@ class BaseModel:
         # Scale industrial and agricultural systems
         self.world3.ici *= scaling_factor * 0.9   # Industrial capital
         self.world3.ali *= scaling_factor * 0.95  # Arable land
-        self.world3.sfpc *= 1.0                   # Food per capita remains constant (using correct attribute)
+        self.world3.sfpc *= 1.0                   # Food per capita remains constant
 
         # Scale service sector and capital
         self.world3.sci *= scaling_factor * 0.85  # Service capital
