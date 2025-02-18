@@ -94,34 +94,56 @@ class GCRModel(BaseModel):
     def apply_gcr_effects(self, results: pd.DataFrame, year: int, reward: float) -> None:
         """Apply GCR policy effects to various model parameters."""
         try:
-            # Calculate impact modifiers based on reward
-            industrial_modifier = max(0.85, 1.0 - (reward * 0.001))  # Stronger impact on industry
-            pollution_modifier = max(0.80, 1.0 - (reward * 0.002))   # Even stronger impact on pollution
-            food_modifier = max(0.95, 1.0 - (reward * 0.0005))      # Gentle impact on food production
-            service_modifier = max(0.90, 1.0 - (reward * 0.0008))   # Moderate impact on services
+            # Calculate impact modifiers based on reward with gentler effects
+            industrial_modifier = max(0.92, 1.0 - (reward * 0.0005))  # Gentler impact on industry
+            pollution_modifier = max(0.90, 1.0 - (reward * 0.0008))   # Gentler impact on pollution
+            food_modifier = max(0.95, 1.0 - (reward * 0.0003))       # Very gentle impact on food
+            service_modifier = max(0.93, 1.0 - (reward * 0.0004))    # Gentle impact on services
 
-            # Apply modifiers with varying time horizons
-            future_years = range(year, min(year + 5, self.stop_time + 1))
+            # Apply modifiers with shorter time horizon and smoother decay
+            future_years = range(year, min(year + 3, self.stop_time + 1))
             for future_year in future_years:
-                time_factor = 1.0 - (0.2 * (future_year - year))  # 20% reduction per year
-                if time_factor > 0:
-                    # Update industrial output
-                    results.loc[future_year, 'industrial_output'] *= industrial_modifier ** time_factor
+                # Use exponential decay instead of linear
+                time_delta = future_year - year
+                time_factor = np.exp(-0.5 * time_delta)  # Smoother decay
 
-                    # Update pollution index with stronger effect
-                    results.loc[future_year, 'persistent_pollution_index'] *= pollution_modifier ** time_factor
+                if time_factor > 0.1:  # Only apply significant effects
+                    # Update industrial output with smoothing
+                    current_industrial = results.loc[future_year, 'industrial_output']
+                    new_industrial = current_industrial * (industrial_modifier ** time_factor)
+                    results.loc[future_year, 'industrial_output'] = (
+                        current_industrial * 0.7 + new_industrial * 0.3  # Blend old and new values
+                    )
 
-                    # Update food per capita (affected by both industrial capacity and pollution)
-                    results.loc[future_year, 'food_per_capita'] *= food_modifier ** time_factor
+                    # Update pollution index with smoother transition
+                    current_pollution = results.loc[future_year, 'persistent_pollution_index']
+                    new_pollution = current_pollution * (pollution_modifier ** time_factor)
+                    results.loc[future_year, 'persistent_pollution_index'] = (
+                        current_pollution * 0.8 + new_pollution * 0.2  # More weight on current value
+                    )
 
-                    # Update service output (affected by industrial capacity)
-                    results.loc[future_year, 'service_output_per_capita'] *= service_modifier ** time_factor
+                    # Update food per capita with minimal disruption
+                    current_food = results.loc[future_year, 'food_per_capita']
+                    new_food = current_food * (food_modifier ** time_factor)
+                    results.loc[future_year, 'food_per_capita'] = (
+                        current_food * 0.9 + new_food * 0.1  # Mostly preserve current value
+                    )
 
-                    # Recalculate life expectancy based on modified pollution and services
+                    # Update service output with smooth transition
+                    current_service = results.loc[future_year, 'service_output_per_capita']
+                    new_service = current_service * (service_modifier ** time_factor)
+                    results.loc[future_year, 'service_output_per_capita'] = (
+                        current_service * 0.8 + new_service * 0.2  # Blend for smooth transition
+                    )
+
+                    # Life expectancy changes should be very gradual
                     base_life_expectancy = results.loc[future_year, 'life_expectancy']
-                    pollution_effect = 1.0 - (0.05 * (1.0 - pollution_modifier))  # Up to 5% reduction
-                    service_effect = 1.0 + (0.02 * (1.0 - service_modifier))     # Up to 2% increase
-                    results.loc[future_year, 'life_expectancy'] = base_life_expectancy * pollution_effect * service_effect
+                    pollution_effect = 1.0 - (0.02 * (1.0 - pollution_modifier) * time_factor)
+                    service_effect = 1.0 + (0.01 * (1.0 - service_modifier) * time_factor)
+                    new_life_expectancy = base_life_expectancy * pollution_effect * service_effect
+                    results.loc[future_year, 'life_expectancy'] = (
+                        base_life_expectancy * 0.95 + new_life_expectancy * 0.05  # Very gradual change
+                    )
 
         except Exception as e:
             print(f"Error applying GCR effects: {str(e)}")
