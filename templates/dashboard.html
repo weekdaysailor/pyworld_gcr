@@ -27,6 +27,16 @@
     <div class="col-md-12 mb-4">
         <div class="card">
             <div class="card-body">
+                <div id="co2ePlot" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-body">
                 <div id="populationPlot" style="height: 500px;"></div>
             </div>
         </div>
@@ -58,15 +68,22 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize plots if data is available
+    // Initialize CO2e plot
+    {% if plots.co2e %}
+    Plotly.newPlot('co2ePlot', {{ plots.co2e.data | tojson | safe }}, {{ plots.co2e.layout | tojson | safe }});
+    {% endif %}
+
+    // Initialize population plot
     {% if plots.population %}
     Plotly.newPlot('populationPlot', {{ plots.population.data | tojson | safe }}, {{ plots.population.layout | tojson | safe }});
     {% endif %}
 
+    // Initialize industrial output plot
     {% if plots.industrial %}
     Plotly.newPlot('industrialPlot', {{ plots.industrial.data | tojson | safe }}, {{ plots.industrial.layout | tojson | safe }});
     {% endif %}
 
+    // Initialize pollution plot
     {% if plots.pollution %}
     Plotly.newPlot('pollutionPlot', {{ plots.pollution.data | tojson | safe }}, {{ plots.pollution.layout | tojson | safe }});
     {% endif %}
