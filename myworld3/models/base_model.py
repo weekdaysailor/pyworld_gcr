@@ -33,8 +33,8 @@ class BaseModel:
         current_total = (self.world3.p1i + self.world3.p2i + 
                         self.world3.p3i + self.world3.p4i)
 
-        # Calculate scaling factor
-        scaling_factor = self.target_population / current_total
+        # Calculate scaling factor with proper formatting
+        scaling_factor = float(self.target_population) / float(current_total)
 
         print(f"\nScaling population by factor: {scaling_factor:.4f}")
         print("Initial population distribution:")
@@ -45,10 +45,10 @@ class BaseModel:
         print(f"Total:      {current_total:.2f} million")
 
         # Scale each cohort
-        self.world3.p1i *= scaling_factor  # 0-14 years
-        self.world3.p2i *= scaling_factor  # 15-44 years
-        self.world3.p3i *= scaling_factor  # 45-64 years
-        self.world3.p4i *= scaling_factor  # 65+ years
+        self.world3.p1i = float(self.world3.p1i * scaling_factor)  # 0-14 years
+        self.world3.p2i = float(self.world3.p2i * scaling_factor)  # 15-44 years
+        self.world3.p3i = float(self.world3.p3i * scaling_factor)  # 45-64 years
+        self.world3.p4i = float(self.world3.p4i * scaling_factor)  # 65+ years
 
         new_total = (self.world3.p1i + self.world3.p2i + 
                     self.world3.p3i + self.world3.p4i)

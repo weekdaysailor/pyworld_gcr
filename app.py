@@ -3,6 +3,7 @@ from flask import Flask, render_template, jsonify, request
 import os
 import logging
 import sys
+from threading import Lock
 from myworld3.models.base_model import BaseModel
 from myworld3.models.gcr_model import GCRModel
 from myworld3.utils.plotly_viz import create_simulation_dashboard
@@ -18,8 +19,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.urandom(24)
 
-# Store simulation results globally
+# Store simulation results globally with thread safety
 simulation_figures = {}
+simulation_lock = Lock()
 
 @app.route('/health')
 def health_check():
@@ -56,11 +58,12 @@ def run_simulations(xcc_price=100.0):
         gcr_results = gcr_model.run_simulation()
         logger.info("GCR simulation complete")
 
-        # Generate Plotly figures
-        global simulation_figures
+        # Generate Plotly figures with thread safety
         logger.info("Generating visualization...")
         try:
-            simulation_figures = create_simulation_dashboard(gcr_results, baseline_results)
+            with simulation_lock:
+                global simulation_figures
+                simulation_figures = create_simulation_dashboard(gcr_results, baseline_results)
             logger.info("Successfully created dashboard figures")
         except Exception as viz_error:
             logger.error(f"Error creating dashboard: {str(viz_error)}", exc_info=True)
@@ -77,13 +80,14 @@ def dashboard():
     """Render the main dashboard."""
     try:
         logger.info("Received request to dashboard endpoint")
-        if not simulation_figures:
-            logger.info("No simulation results found, running simulations...")
-            success = run_simulations()
-            if not success:
-                error_msg = "Failed to run simulations. Check server logs for details."
-                logger.error(error_msg)
-                return render_template('simulation.html', error=error_msg)
+        with simulation_lock:
+            if not simulation_figures:
+                logger.info("No simulation results found, running simulations...")
+                success = run_simulations()
+                if not success:
+                    error_msg = "Failed to run simulations. Check server logs for details."
+                    logger.error(error_msg)
+                    return render_template('simulation.html', error=error_msg)
 
         logger.info("Rendering dashboard template")
         return render_template('dashboard.html', plots=simulation_figures)
@@ -97,10 +101,17 @@ def run_new_simulation():
     """Run a new simulation with specified XCC price and return updated plots."""
     try:
         xcc_price = float(request.args.get('xcc_price', 100))
+        if xcc_price <= 0:
+            return jsonify({'status': 'error', 'message': 'XCC price must be positive'}), 400
+
         logger.info(f"Received request to run new simulation with XCC price: {xcc_price}")
         if run_simulations(xcc_price):
             return jsonify({'status': 'success', 'message': 'Simulation completed successfully'})
         return jsonify({'status': 'error', 'message': 'Failed to run simulations'}), 500
+    except ValueError as ve:
+        error_msg = f"Invalid XCC price value: {str(ve)}"
+        logger.error(error_msg)
+        return jsonify({'status': 'error', 'message': error_msg}), 400
     except Exception as e:
         error_msg = f"Error in run_new_simulation route: {str(e)}"
         logger.error(error_msg, exc_info=True)
