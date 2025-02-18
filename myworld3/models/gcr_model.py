@@ -94,56 +94,39 @@ class GCRModel(BaseModel):
     def apply_gcr_effects(self, results: pd.DataFrame, year: int, reward: float) -> None:
         """Apply GCR policy effects to various model parameters."""
         try:
-            # Calculate impact modifiers based on reward with gentler effects
-            industrial_modifier = max(0.92, 1.0 - (reward * 0.0005))  # Gentler impact on industry
-            pollution_modifier = max(0.90, 1.0 - (reward * 0.0008))   # Gentler impact on pollution
-            food_modifier = max(0.95, 1.0 - (reward * 0.0003))       # Very gentle impact on food
-            service_modifier = max(0.93, 1.0 - (reward * 0.0004))    # Gentle impact on services
+            if year < self.reward_start_year:
+                return  # No effects before policy starts
 
-            # Apply modifiers with shorter time horizon and smoother decay
-            future_years = range(year, min(year + 3, self.stop_time + 1))
-            for future_year in future_years:
-                # Use exponential decay instead of linear
-                time_delta = future_year - year
-                time_factor = np.exp(-0.5 * time_delta)  # Smoother decay
+            # Calculate impact modifiers with continuous scaling
+            years_active = year - self.reward_start_year
+            policy_strength = 1.0 - np.exp(-0.1 * years_active)  # Smooth ramp-up of policy effects
 
-                if time_factor > 0.1:  # Only apply significant effects
-                    # Update industrial output with smoothing
-                    current_industrial = results.loc[future_year, 'industrial_output']
-                    new_industrial = current_industrial * (industrial_modifier ** time_factor)
-                    results.loc[future_year, 'industrial_output'] = (
-                        current_industrial * 0.7 + new_industrial * 0.3  # Blend old and new values
-                    )
+            base_reward_effect = reward / self.initial_reward_value
+            effect_strength = np.tanh(0.5 * base_reward_effect)  # Bounded effect strength
 
-                    # Update pollution index with smoother transition
-                    current_pollution = results.loc[future_year, 'persistent_pollution_index']
-                    new_pollution = current_pollution * (pollution_modifier ** time_factor)
-                    results.loc[future_year, 'persistent_pollution_index'] = (
-                        current_pollution * 0.8 + new_pollution * 0.2  # More weight on current value
-                    )
+            # Calculate modifiers with smooth transitions
+            industrial_modifier = 1.0 - (0.08 * effect_strength * policy_strength)
+            pollution_modifier = 1.0 - (0.12 * effect_strength * policy_strength)
+            food_modifier = 1.0 - (0.05 * effect_strength * policy_strength)
+            service_modifier = 1.0 - (0.07 * effect_strength * policy_strength)
 
-                    # Update food per capita with minimal disruption
-                    current_food = results.loc[future_year, 'food_per_capita']
-                    new_food = current_food * (food_modifier ** time_factor)
-                    results.loc[future_year, 'food_per_capita'] = (
-                        current_food * 0.9 + new_food * 0.1  # Mostly preserve current value
-                    )
+            # Apply modifiers directly to current year
+            current_industrial = results.loc[year, 'industrial_output']
+            results.loc[year, 'industrial_output'] = current_industrial * industrial_modifier
 
-                    # Update service output with smooth transition
-                    current_service = results.loc[future_year, 'service_output_per_capita']
-                    new_service = current_service * (service_modifier ** time_factor)
-                    results.loc[future_year, 'service_output_per_capita'] = (
-                        current_service * 0.8 + new_service * 0.2  # Blend for smooth transition
-                    )
+            current_pollution = results.loc[year, 'persistent_pollution_index']
+            results.loc[year, 'persistent_pollution_index'] = current_pollution * pollution_modifier
 
-                    # Life expectancy changes should be very gradual
-                    base_life_expectancy = results.loc[future_year, 'life_expectancy']
-                    pollution_effect = 1.0 - (0.02 * (1.0 - pollution_modifier) * time_factor)
-                    service_effect = 1.0 + (0.01 * (1.0 - service_modifier) * time_factor)
-                    new_life_expectancy = base_life_expectancy * pollution_effect * service_effect
-                    results.loc[future_year, 'life_expectancy'] = (
-                        base_life_expectancy * 0.95 + new_life_expectancy * 0.05  # Very gradual change
-                    )
+            current_food = results.loc[year, 'food_per_capita']
+            results.loc[year, 'food_per_capita'] = current_food * food_modifier
+
+            current_service = results.loc[year, 'service_output_per_capita']
+            results.loc[year, 'service_output_per_capita'] = current_service * service_modifier
+
+            # Update life expectancy with smooth transitions
+            current_life = results.loc[year, 'life_expectancy']
+            life_modifier = 1.0 + (0.02 * effect_strength * policy_strength)  # Small positive effect
+            results.loc[year, 'life_expectancy'] = current_life * life_modifier
 
         except Exception as e:
             print(f"Error applying GCR effects: {str(e)}")
