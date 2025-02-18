@@ -13,4 +13,5 @@ dependencies = [
     "pandas>=2.2.3",
     "plotly>=6.0.0",
     "pyworld3==1.0.0",
+    "twilio>=9.4.5",
 ]

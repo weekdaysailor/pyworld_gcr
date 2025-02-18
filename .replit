@@ -33,7 +33,7 @@ args = "World3 Simulation"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Flask Server"
+args = "World3 Dashboard"
 
 [[workflows.workflow]]
 name = "World3 Simulation"
@@ -50,7 +50,7 @@ task = "shell.exec"
 args = "python main.py"
 
 [[workflows.workflow]]
-name = "Flask Server"
+name = "World3 Dashboard"
 author = "agent"
 
 [workflows.workflow.metadata]
