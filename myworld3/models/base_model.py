@@ -62,8 +62,8 @@ class BaseModel:
 
             # Apply historical calibration for pre-2025 emissions
             if year <= 2025:
-                nearest_historical = min(self.historical_co2.keys(), 
-                                      key=lambda x: abs(x - year))
+                nearest_historical = min(self.historical_co2.keys(),
+                                          key=lambda x: abs(x - year))
                 historical_factor = self.historical_co2[nearest_historical] / self.historical_co2[1900]
                 total_emissions *= historical_factor
                 natural_uptake *= historical_factor
@@ -92,8 +92,8 @@ class BaseModel:
             return
 
         # Calculate current total from cohorts
-        current_total = (self.world3.p1i + self.world3.p2i + 
-                        self.world3.p3i + self.world3.p4i)
+        current_total = (self.world3.p1i + self.world3.p2i +
+                         self.world3.p3i + self.world3.p4i)
 
         print(f"\nInitial state before scaling:")
         print(f"Population:        {current_total:.2f} million")
@@ -130,8 +130,8 @@ class BaseModel:
         self.world3.ppolx *= scaling_factor * 0.7 # Persistent pollution
 
         # Recalculate total population after scaling
-        new_total = (self.world3.p1i + self.world3.p2i + 
-                    self.world3.p3i + self.world3.p4i)
+        new_total = (self.world3.p1i + self.world3.p2i +
+                     self.world3.p3i + self.world3.p4i)
 
         print("\nScaled state:")
         print(f"Population:        {new_total:.2f} million")
@@ -203,7 +203,7 @@ class BaseModel:
             raise
 
     def run_simulation(self) -> pd.DataFrame:
-        """Run the World3 simulation and return results."""
+        """Run World3 simulation and calculate atmospheric CO2."""
         if self.world3 is None:
             print("Initializing model before simulation...")
             self.initialize_model()
@@ -242,8 +242,9 @@ class BaseModel:
             self.results['net_emissions'] = 0.0
             self.results['emission_intensity'] = 0.0
             self.results['xcc_sequestration'] = 0.0  # Will remain 0 for base model
+            self.results['atmospheric_co2'] = 0.0
 
-            # Calculate emissions for each timestep
+            # First calculate emissions for each timestep
             for time in time_series:
                 emissions_data = self.calculate_co2e(
                     int(time),
@@ -254,6 +255,16 @@ class BaseModel:
                 # Store all emission components
                 for key, value in emissions_data.items():
                     self.results.loc[time, key] = value
+
+            # Now calculate cumulative emissions and atmospheric CO2
+            cumulative_emissions = self.results['net_emissions'].cumsum()
+
+            # Calculate atmospheric CO2 for each timestep
+            for time in time_series:
+                self.results.loc[time, 'atmospheric_co2'] = self.calculate_atmospheric_co2(
+                    int(time),
+                    cumulative_emissions[time]
+                )
 
             print("Simulation completed successfully.")
             return self.results
@@ -276,3 +287,26 @@ class BaseModel:
         except Exception as e:
             print(f"Error getting variables: {str(e)}")
             return {}
+
+    def calculate_atmospheric_co2(self, year: int, cumulative_emissions: float) -> float:
+        """Calculate atmospheric CO2 concentration in ppm."""
+        try:
+            # Get historical value if available
+            if year <= 2025:
+                nearest_historical = min(self.historical_co2.keys(),
+                                        key=lambda x: abs(x - year))
+                return self.historical_co2[nearest_historical]
+
+            # Project forward based on cumulative emissions
+            # Approximate conversion: 1 GtC ≈ 0.47 ppm CO2
+            # First convert Mt CO2e to GtC (divide by 3667 for molecular weight conversion)
+            gtc_emissions = cumulative_emissions / 3667 / 1000
+
+            # Calculate ppm increase from 2025 baseline
+            ppm_increase = gtc_emissions * 0.47
+
+            # Add to 2025 baseline
+            return self.historical_co2[2025] + float(ppm_increase)
+        except Exception as e:
+            print(f"Error calculating atmospheric CO2: {str(e)}")
+            return self.historical_co2[1900]  # fallback to 1900 value

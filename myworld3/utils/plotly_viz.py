@@ -14,51 +14,35 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     def convert_series(series):
         return [float(x) if isinstance(x, (np.floating, np.integer)) else x for x in series]
 
-    # CO2e emissions comparison with components
+    # CO2e emissions converted to atmospheric concentration
     fig_co2e = go.Figure()
 
-    # Plot baseline net emissions
+    # Generate atmospheric CO2 concentrations
+    baseline_co2_ppm = convert_series(baseline_results['atmospheric_co2'])
+    gcr_co2_ppm = convert_series(gcr_results['atmospheric_co2'])
+    years = convert_series(baseline_results.index)
+
+    # Plot baseline Keeling curve projection
     fig_co2e.add_trace(go.Scatter(
-        x=convert_series(baseline_results.index),
-        y=convert_series(baseline_results['net_emissions']),
-        name='Baseline Net Emissions',
+        x=years,
+        y=baseline_co2_ppm,
+        name='Baseline CO₂ (Keeling Curve)',
         line=dict(color='red')
     ))
 
-    # Plot GCR scenario components
+    # Plot GCR scenario with XCC effects
     fig_co2e.add_trace(go.Scatter(
-        x=convert_series(gcr_results.index),
-        y=convert_series(gcr_results['gross_emissions']),
-        name='GCR Gross Emissions',
-        line=dict(color='orange', dash='dot')
-    ))
-
-    fig_co2e.add_trace(go.Scatter(
-        x=convert_series(gcr_results.index),
-        y=convert_series(gcr_results['natural_uptake']),
-        name='Natural Carbon Uptake',
-        line=dict(color='green', dash='dash')
-    ))
-
-    fig_co2e.add_trace(go.Scatter(
-        x=convert_series(gcr_results.index),
-        y=convert_series(gcr_results['xcc_sequestration']),
-        name='XCC Sequestration',
-        line=dict(color='blue', dash='dash')
-    ))
-
-    fig_co2e.add_trace(go.Scatter(
-        x=convert_series(gcr_results.index),
-        y=convert_series(gcr_results['net_emissions']),
-        name='GCR Net Emissions',
-        line=dict(color='purple')
+        x=years,
+        y=gcr_co2_ppm,
+        name='GCR CO₂ with XCC',
+        line=dict(color='blue')
     ))
 
     # Update layout
     fig_co2e.update_layout(
-        title='CO2e Emissions Components Over Time',
+        title='Atmospheric CO₂ Concentration Over Time',
         xaxis_title='Year',
-        yaxis_title='CO2e (Mt)',
+        yaxis_title='CO₂ (ppm)',
         hovermode='x unified',
         template='plotly_white',
         showlegend=True,
@@ -70,6 +54,45 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
             x=1
         )
     )
+
+    # Find transition points safely
+    net_zero_year = None
+    net_negative_year = None
+
+    # Use numpy for safer array operations
+    net_emissions = np.array(convert_series(gcr_results['net_emissions']))
+    years_array = np.array(years)
+
+    # Find first net-zero point
+    zero_indices = np.where(net_emissions <= 0)[0]
+    if len(zero_indices) > 0:
+        net_zero_idx = zero_indices[0]
+        net_zero_year = years_array[net_zero_idx]
+
+        # Find first net-negative point after net-zero
+        negative_indices = np.where((net_emissions < 0) & (years_array > net_zero_year))[0]
+        if len(negative_indices) > 0:
+            net_negative_idx = negative_indices[0]
+            net_negative_year = years_array[net_negative_idx]
+
+    # Add annotations if transition points are found
+    if net_zero_year:
+        fig_co2e.add_annotation(
+            x=net_zero_year,
+            y=gcr_co2_ppm[years.index(net_zero_year)],
+            text='Net Zero',
+            showarrow=True,
+            arrowhead=1
+        )
+
+    if net_negative_year:
+        fig_co2e.add_annotation(
+            x=net_negative_year,
+            y=gcr_co2_ppm[years.index(net_negative_year)],
+            text='Net Negative',
+            showarrow=True,
+            arrowhead=1
+        )
 
     figures['co2e'] = fig_co2e.to_dict()
 
@@ -123,7 +146,6 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         showlegend=True
     )
     figures['industrial'] = fig_ind.to_dict()
-
 
     # Pollution comparison
     fig_pol = go.Figure()
