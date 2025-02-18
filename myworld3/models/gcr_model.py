@@ -8,14 +8,20 @@ class GCRModel(BaseModel):
     """World3 model with Global Carbon Reward policy implementation."""
 
     def __init__(self, 
-                 start_time: int = 1900,
-                 stop_time: int = 2100,
+                 start_time: int = 2025,
+                 stop_time: int = 2125,
                  dt: float = 0.5,
                  reward_start_year: int = 2025,
                  initial_reward_value: float = 100.0,
                  target_population: Optional[float] = None):
-        """Initialize the GCR model."""
+        """Initialize the GCR model with normalized time scale."""
         super().__init__(start_time, stop_time, dt, target_population)
+
+        # Validate and normalize reward start year
+        if reward_start_year < start_time:
+            print(f"Warning: Adjusting reward_start_year from {reward_start_year} to match start_time {start_time}")
+            reward_start_year = start_time
+
         self.reward_start_year = reward_start_year
         self.initial_reward_value = initial_reward_value
         self.reward_history: List[Dict[str, float]] = []

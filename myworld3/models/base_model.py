@@ -7,9 +7,22 @@ from pyworld3 import World3
 class BaseModel:
     """Base class for World3-based models."""
 
-    def __init__(self, start_time: int = 1900, stop_time: int = 2100, dt: float = 0.5,
+    def __init__(self, start_time: int = 2025, stop_time: int = 2125, dt: float = 0.5,
                  target_population: Optional[float] = None):
-        """Initialize the base model."""
+        """Initialize the base model with normalized time scale."""
+        # Validate time parameters
+        if start_time < 2025:
+            print(f"Warning: Adjusting start_time from {start_time} to minimum allowed year 2025")
+            start_time = 2025
+
+        if stop_time <= start_time:
+            print(f"Warning: Adjusting stop_time to be 100 years after start_time")
+            stop_time = start_time + 100
+
+        if dt <= 0:
+            print("Warning: Invalid dt value, setting to default 0.5")
+            dt = 0.5
+
         self.start_time = start_time
         self.stop_time = stop_time
         self.dt = dt
