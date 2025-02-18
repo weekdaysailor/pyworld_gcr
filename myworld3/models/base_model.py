@@ -19,20 +19,28 @@ class BaseModel:
         self.base_intensity = 2.5  # Base CO2e intensity per unit of industrial output
         self.tech_improvement_rate = 0.01  # 1% annual improvement in base technology
 
-        # Historical CO2 data (ppm) - Combined ice core and Mauna Loa measurements
+        # Historical CO2 data (ppm) - Combination of ice core data and Mauna Loa measurements
+        # Pre-1958 values are from ice core data, post-1958 from Mauna Loa
         self.historical_co2 = {
-            1900: 296.0,  # From ice core data
-            1910: 299.2,
-            1920: 303.0,
+            1900: 296.3,  # Ice core derived
+            1910: 299.4,
+            1920: 302.9,
             1930: 306.8,
             1940: 310.5,
             1950: 311.3,
-            1960: 316.91,  # Start of direct Mauna Loa measurements
+            1958: 315.39,  # Start of Mauna Loa measurements
+            1960: 316.91,
+            1965: 320.04,
             1970: 325.68,
+            1975: 331.08,
             1980: 338.91,
+            1985: 346.35,
             1990: 354.39,
+            1995: 360.80,
             2000: 369.55,
+            2005: 379.80,
             2010: 389.90,
+            2015: 400.83,
             2020: 414.72,
             2025: 421.50  # Recent measurements
         }
@@ -297,7 +305,7 @@ class BaseModel:
     def calculate_atmospheric_co2(self, year: int, cumulative_emissions: float) -> float:
         """Calculate atmospheric CO2 concentration in ppm."""
         try:
-            # For historical period (up to 2025), use interpolation between known values
+            # For historical period (up to 2025), use exponential interpolation
             if year <= 2025:
                 # Find the two closest years
                 years = sorted(self.historical_co2.keys())
@@ -308,13 +316,22 @@ class BaseModel:
                 if lower_year == upper_year:
                     return self.historical_co2[year]
 
-                # Linear interpolation between closest points
+                # Get CO2 values for bounds
                 lower_co2 = self.historical_co2[lower_year]
                 upper_co2 = self.historical_co2[upper_year]
 
-                # Calculate interpolated value
-                fraction = (year - lower_year) / (upper_year - lower_year)
-                return lower_co2 + (upper_co2 - lower_co2) * fraction
+                # Calculate time fraction
+                time_span = upper_year - lower_year
+                time_progress = year - lower_year
+
+                # Use exponential interpolation for smoother curve
+                # ln(CO2) = a + bt, where t is time
+                if lower_co2 > 0 and upper_co2 > 0:
+                    a = np.log(lower_co2)
+                    b = (np.log(upper_co2) - np.log(lower_co2)) / time_span
+                    return float(np.exp(a + b * time_progress))
+
+                return lower_co2 + (upper_co2 - lower_co2) * (time_progress / time_span)
 
             # For future projections (after 2025)
             # Convert cumulative emissions to CO2 concentration increase
