@@ -21,23 +21,31 @@ class GCRModel(BaseModel):
         self.reward_history: List[Dict[str, float]] = []
         self.annual_increase_rate = 0.05  # 5% annual increase
         self.intensity_improvement_factor = 0.02  # Additional 2% annual improvement due to GCR
-        self.base_intensity = 1.0  # Base carbon intensity factor
-        self.co2e_per_industrial_unit = 0.5  # CO2e emissions per unit of industrial output
+        self.sequestration_efficiency = 0.85  # 85% efficiency in carbon sequestration projects
+        self.min_sequestration_years = 100  # Minimum years for carbon sequestration
+        self.natural_carbon_uptake = 0.1 # 10% natural carbon uptake
 
-    def calculate_emission_intensity(self, year: int, industrial_output: float) -> float:
+
+    def calculate_emission_intensity(self, year: float, industrial_output: float) -> float:
         """Calculate emission intensity with GCR policy effects."""
         try:
             # Calculate base intensity with technological improvement
-            base_intensity = self.base_intensity * (0.98 ** (year - self.start_time))  # 2% natural improvement
+            base_intensity = super().calculate_emission_intensity(int(year), industrial_output)
 
             if year < self.reward_start_year:
                 return base_intensity
 
-            # Calculate additional improvement from GCR policy
+            # Calculate XCC-driven improvements
             years_with_gcr = year - self.reward_start_year
-            gcr_improvement = (1 - self.intensity_improvement_factor) ** years_with_gcr
 
-            return float(base_intensity * gcr_improvement)
+            # XCC effectiveness increases with reward value and time
+            # But has diminishing returns
+            xcc_effect = (1.0 - np.exp(-0.05 * years_with_gcr)) * (
+                self.sequestration_efficiency * 
+                min(1.0, self.intensity_improvement_factor * years_with_gcr)
+            )
+
+            return float(base_intensity * (1.0 - xcc_effect))
         except Exception as e:
             print(f"Error calculating emission intensity: {str(e)}")
             return self.base_intensity
@@ -47,12 +55,18 @@ class GCRModel(BaseModel):
         """Calculate CO2e emissions based on industrial output and current intensity."""
         try:
             # Base emissions from industrial output
-            base_emissions = industrial_output * emission_intensity * self.co2e_per_industrial_unit
+            base_emissions = industrial_output * emission_intensity
 
             # Additional emissions from pollution feedback
-            pollution_factor = 1.0 + (pollution_index * 0.2)  # 20% increase per unit of pollution index
+            pollution_factor = 1.0 + (pollution_index * 0.2)
 
-            return float(base_emissions * pollution_factor)
+            # Account for natural carbon sinks and XCC sequestration
+            net_emissions = base_emissions * pollution_factor
+
+            # Apply natural uptake (simplified carbon cycle)
+            natural_uptake = net_emissions * self.natural_carbon_uptake
+
+            return float(net_emissions - natural_uptake)
         except Exception as e:
             print(f"Error calculating CO2e emissions: {str(e)}")
             return 0.0
@@ -140,6 +154,8 @@ class GCRModel(BaseModel):
             # Initialize CO2e emissions column if not present
             if 'co2e_emissions' not in results.columns:
                 results['co2e_emissions'] = 0.0
+            if 'emission_intensity' not in results.columns:
+                results['emission_intensity'] = 1.0
 
             # Create time points array with proper dt steps
             time_points = np.arange(self.start_time, self.stop_time + self.dt, self.dt)

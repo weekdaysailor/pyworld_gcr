@@ -8,7 +8,7 @@ class BaseModel:
     """Base class for World3-based models."""
 
     def __init__(self, start_time: int = 1900, stop_time: int = 2100, dt: float = 0.5,
-                 target_population: Optional[float] = 0): # Updated to default to 0
+                 target_population: Optional[float] = 0):
         """Initialize the base model."""
         self.start_time = start_time
         self.stop_time = stop_time
@@ -18,6 +18,23 @@ class BaseModel:
         self.results: Optional[pd.DataFrame] = None
         self.base_intensity = 2.5  # Base CO2e intensity per unit of industrial output
         self.tech_improvement_rate = 0.01  # 1% annual improvement in base technology
+
+        # Historical CO2 data (ppm) - Keeling curve extrapolated back to 1900
+        # Source: Combined ice core data and direct measurements
+        self.historical_co2 = {
+            1900: 295.0,  # Extrapolated from ice core data
+            1920: 303.0,
+            1940: 310.0,
+            1960: 316.91,  # Start of direct Mauna Loa measurements
+            1980: 338.91,
+            2000: 369.55,
+            2020: 414.72,
+            2025: 421.50  # Recent measurements
+        }
+
+        # Natural carbon cycle parameters
+        self.natural_carbon_uptake = 0.0167  # ~1.67% of excess CO2 absorbed annually by natural sinks
+        self.residence_time = 100  # Minimum sequestration time in years for XCC credits
 
     def calculate_emission_intensity(self, year: int, industrial_output: float) -> float:
         """Calculate emission intensity factor considering technological improvements."""
@@ -38,6 +55,13 @@ class BaseModel:
 
         # Additional emissions from pollution feedback
         pollution_multiplier = 1.0 + (pollution_index * 0.2)  # 20% increase per unit of pollution
+
+        # Apply historical calibration for pre-2025 emissions
+        if year <= 2025:
+            nearest_historical = min(self.historical_co2.keys(), 
+                                  key=lambda x: abs(x - year))
+            historical_factor = self.historical_co2[nearest_historical] / self.historical_co2[1900]
+            return float(base_co2e * pollution_multiplier * historical_factor)
 
         return float(base_co2e * pollution_multiplier)
 

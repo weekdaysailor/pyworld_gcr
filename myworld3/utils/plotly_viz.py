@@ -7,20 +7,57 @@ import json
 import numpy as np
 
 def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.DataFrame) -> Dict[str, dict]:
-    """Create interactive Plotly dashboard figures for simulation results.
-
-    Args:
-        gcr_results: Results from GCR model
-        baseline_results: Results from baseline model
-
-    Returns:
-        Dictionary containing Plotly figures as JSON-serializable dictionaries
-    """
+    """Create interactive Plotly dashboard figures for simulation results."""
     figures = {}
 
     # Convert DataFrames to ensure JSON serializable values
     def convert_series(series):
         return [float(x) if isinstance(x, (np.floating, np.integer)) else x for x in series]
+
+    # CO2e emissions comparison with historical data
+    fig_co2e = go.Figure()
+
+    # Plot baseline emissions
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(baseline_results.index),
+        y=convert_series(baseline_results['co2e_emissions']),
+        name='Baseline Emissions',
+        line=dict(color='red', dash='dash')
+    ))
+
+    # Plot GCR scenario emissions
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(gcr_results.index),
+        y=convert_series(gcr_results['co2e_emissions']),
+        name='GCR Scenario Emissions',
+        line=dict(color='blue')
+    ))
+
+    # Add emission intensity comparison
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(gcr_results.index),
+        y=convert_series(gcr_results['emission_intensity']),
+        name='GCR Emission Intensity',
+        line=dict(color='green', dash='dot'),
+        yaxis='y2'
+    ))
+
+    # Update layout with dual y-axes
+    fig_co2e.update_layout(
+        title='CO2e Emissions and Intensity Over Time',
+        xaxis_title='Year',
+        yaxis_title='CO2e Emissions (Mt)',
+        yaxis2=dict(
+            title='Emission Intensity',
+            overlaying='y',
+            side='right'
+        ),
+        hovermode='x unified',
+        template='plotly_white',
+        showlegend=True
+    )
+
+    figures['co2e'] = fig_co2e.to_dict()
 
     # Population comparison
     fig_pop = go.Figure()
@@ -73,30 +110,7 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     )
     figures['industrial'] = fig_ind.to_dict()
 
-    # CO2e emissions comparison
-    fig_co2e = go.Figure()
-    fig_co2e.add_trace(go.Scatter(
-        x=convert_series(gcr_results.index - 2025),
-        y=convert_series(gcr_results['co2e_emissions']),
-        name='GCR Scenario',
-        line=dict(color='blue')
-    ))
-    fig_co2e.add_trace(go.Scatter(
-        x=convert_series(baseline_results.index - 2025),
-        y=convert_series(baseline_results['co2e_emissions']),
-        name='Baseline',
-        line=dict(color='red', dash='dash')
-    ))
-    fig_co2e.update_layout(
-        title='CO2e Emissions Projection',
-        xaxis_title='Years from 2025',
-        yaxis_title='CO2e Emissions (Mt)',
-        xaxis=dict(tickmode='linear', tick0=0, dtick=20),
-        hovermode='x unified',
-        template='plotly_white',
-        showlegend=True
-    )
-    figures['co2e'] = fig_co2e.to_dict()
+
 
     # Pollution comparison
     fig_pol = go.Figure()
