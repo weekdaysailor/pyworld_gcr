@@ -57,7 +57,7 @@ class GCRModel(BaseModel):
             print(f"Error calculating CO2e emissions: {str(e)}")
             return 0.0
 
-    def calculate_reward(self, year: int, co2e_emissions: float, industrial_output: float, 
+    def calculate_reward(self, year: float, co2e_emissions: float, industrial_output: float, 
                         emission_intensity: float) -> float:
         """Calculate carbon reward value based on CO2e emissions and intensity."""
         try:
@@ -91,7 +91,7 @@ class GCRModel(BaseModel):
             print(f"Error calculating reward: {str(e)}")
             return 0.0
 
-    def apply_gcr_effects(self, results: pd.DataFrame, year: int, reward: float) -> None:
+    def apply_gcr_effects(self, results: pd.DataFrame, year: float, reward: float) -> None:
         """Apply GCR policy effects to various model parameters."""
         try:
             if year < self.reward_start_year:
@@ -134,33 +134,36 @@ class GCRModel(BaseModel):
     def run_simulation(self) -> pd.DataFrame:
         """Run World3 simulation with GCR policy effects."""
         try:
+            # Run base simulation first
             results = super().run_simulation()
 
             # Initialize CO2e emissions column if not present
             if 'co2e_emissions' not in results.columns:
                 results['co2e_emissions'] = 0.0
 
-            # Apply GCR effects with intensity-based modifiers
-            for year in range(self.start_time, self.stop_time + 1):
-                # Get current year's metrics
-                year_data = results.loc[year]
-                industrial_output = float(year_data['industrial_output'])
+            # Create time points array with proper dt steps
+            time_points = np.arange(self.start_time, self.stop_time + self.dt, self.dt)
 
-                # Calculate emission intensity for current year
-                emission_intensity = self.calculate_emission_intensity(year, industrial_output)
-                results.loc[year, 'emission_intensity'] = emission_intensity
+            # Apply GCR effects for each time point
+            for time in time_points:
+                # Get current time's metrics
+                industrial_output = float(results.loc[time, 'industrial_output'])
+
+                # Calculate emission intensity for current time
+                emission_intensity = self.calculate_emission_intensity(time, industrial_output)
+                results.loc[time, 'emission_intensity'] = emission_intensity
 
                 # Calculate CO2e emissions
-                pollution_index = float(year_data['persistent_pollution_index'])
+                pollution_index = float(results.loc[time, 'persistent_pollution_index'])
                 co2e_emissions = self.calculate_co2e_emissions(industrial_output, emission_intensity, pollution_index)
-                results.loc[year, 'co2e_emissions'] = co2e_emissions
+                results.loc[time, 'co2e_emissions'] = co2e_emissions
 
-                if year >= self.reward_start_year:
-                    # Calculate and apply GCR effects
-                    reward = self.calculate_reward(year, co2e_emissions, industrial_output, emission_intensity)
-                    self.apply_gcr_effects(results, year, reward)
+                # Calculate and apply GCR effects
+                reward = self.calculate_reward(time, co2e_emissions, industrial_output, emission_intensity)
+                self.apply_gcr_effects(results, time, reward)
 
             return results
+
         except Exception as e:
             print(f"Error in GCR simulation: {str(e)}")
             return super().run_simulation()
