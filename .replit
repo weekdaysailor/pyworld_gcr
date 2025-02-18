@@ -48,7 +48,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python app.py"
-waitForPort = 8088
+waitForPort = 8080
 
 [[workflows.workflow]]
 name = "World3 Test"

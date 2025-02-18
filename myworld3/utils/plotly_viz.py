@@ -73,6 +73,31 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     )
     figures['industrial'] = fig_ind.to_dict()
 
+    # CO2e emissions comparison
+    fig_co2e = go.Figure()
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(gcr_results.index - 2025),
+        y=convert_series(gcr_results['co2e_emissions']),
+        name='GCR Scenario',
+        line=dict(color='blue')
+    ))
+    fig_co2e.add_trace(go.Scatter(
+        x=convert_series(baseline_results.index - 2025),
+        y=convert_series(baseline_results['co2e_emissions']),
+        name='Baseline',
+        line=dict(color='red', dash='dash')
+    ))
+    fig_co2e.update_layout(
+        title='CO2e Emissions Projection',
+        xaxis_title='Years from 2025',
+        yaxis_title='CO2e Emissions (Mt)',
+        xaxis=dict(tickmode='linear', tick0=0, dtick=20),
+        hovermode='x unified',
+        template='plotly_white',
+        showlegend=True
+    )
+    figures['co2e'] = fig_co2e.to_dict()
+
     # Pollution comparison
     fig_pol = go.Figure()
     fig_pol.add_trace(go.Scatter(

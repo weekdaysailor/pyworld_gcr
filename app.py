@@ -87,14 +87,14 @@ def dashboard():
                 if not success:
                     error_msg = "Failed to run simulations. Check server logs for details."
                     logger.error(error_msg)
-                    return render_template('simulation.html', error=error_msg)
+                    return render_template('dashboard.html', error=error_msg)
 
         logger.info("Rendering dashboard template")
         return render_template('dashboard.html', plots=simulation_figures)
     except Exception as e:
         error_msg = f"Error in dashboard route: {str(e)}"
         logger.error(error_msg, exc_info=True)
-        return render_template('simulation.html', error=error_msg)
+        return render_template('dashboard.html', error=error_msg)
 
 @app.route('/run')
 def run_new_simulation():
@@ -122,13 +122,16 @@ if __name__ == '__main__':
         # Create output directory if it doesn't exist
         os.makedirs('myworld3/output', exist_ok=True)
 
-        logger.info("Starting Flask application...")
         # Run initial simulation
+        logger.info("Starting Flask application...")
         if not run_simulations():
             logger.warning("Initial simulation failed, but server will still start")
 
-        port = int(os.environ.get('PORT', 8088))
+        # Get port from environment variable, default to 8080
+        port = int(os.environ.get('PORT', 8080))
         logger.info(f'Starting Flask server on port {port}...')
+
+        # Run the Flask application
         app.run(host='0.0.0.0', port=port, debug=True)
     except Exception as e:
         logger.error(f'Failed to start Flask app: {str(e)}', exc_info=True)
