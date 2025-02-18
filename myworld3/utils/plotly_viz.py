@@ -14,35 +14,45 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     def convert_series(series):
         return [float(x) if isinstance(x, (np.floating, np.integer)) else x for x in series]
 
-    # CO2e emissions converted to atmospheric concentration
+    # CO2e emissions plot
     fig_co2e = go.Figure()
 
-    # Generate atmospheric CO2 concentrations
-    baseline_co2_ppm = convert_series(baseline_results['atmospheric_co2'])
-    gcr_co2_ppm = convert_series(gcr_results['atmospheric_co2'])
+    # Get time series data
     years = convert_series(baseline_results.index)
+    baseline_co2 = convert_series(baseline_results['atmospheric_co2'])
+    gcr_co2 = convert_series(gcr_results['atmospheric_co2'])
 
-    # Plot baseline Keeling curve projection
+    # Plot baseline Keeling curve
     fig_co2e.add_trace(go.Scatter(
         x=years,
-        y=baseline_co2_ppm,
+        y=baseline_co2,
         name='Baseline CO₂ (Keeling Curve)',
-        line=dict(color='red')
+        line=dict(color='red', shape='spline', smoothing=1.3)
     ))
 
-    # Plot GCR scenario with XCC effects
+    # Plot GCR scenario
     fig_co2e.add_trace(go.Scatter(
         x=years,
-        y=gcr_co2_ppm,
+        y=gcr_co2,
         name='GCR CO₂ with XCC',
-        line=dict(color='blue')
+        line=dict(color='blue', shape='spline', smoothing=1.3)
     ))
 
-    # Update layout
+    # Update layout with better axis configuration
     fig_co2e.update_layout(
         title='Atmospheric CO₂ Concentration Over Time',
-        xaxis_title='Year',
-        yaxis_title='CO₂ (ppm)',
+        xaxis=dict(
+            title='Year',
+            tickmode='linear',
+            tick0=1900,
+            dtick=20,
+            gridcolor='lightgray'
+        ),
+        yaxis=dict(
+            title='CO₂ (ppm)',
+            gridcolor='lightgray',
+            range=[min(baseline_co2) * 0.95, max(baseline_co2) * 1.05]
+        ),
         hovermode='x unified',
         template='plotly_white',
         showlegend=True,
@@ -55,31 +65,24 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         )
     )
 
-    # Find transition points safely
+    # Mark transition points
+    net_emissions = convert_series(gcr_results['net_emissions'])
     net_zero_year = None
     net_negative_year = None
 
-    # Use numpy for safer array operations
-    net_emissions = np.array(convert_series(gcr_results['net_emissions']))
-    years_array = np.array(years)
+    # Find transition years
+    for i, (year, emission) in enumerate(zip(years, net_emissions)):
+        if emission <= 0 and net_zero_year is None:
+            net_zero_year = year
+        elif net_zero_year and emission < 0 and net_negative_year is None:
+            net_negative_year = year
+            break
 
-    # Find first net-zero point
-    zero_indices = np.where(net_emissions <= 0)[0]
-    if len(zero_indices) > 0:
-        net_zero_idx = zero_indices[0]
-        net_zero_year = years_array[net_zero_idx]
-
-        # Find first net-negative point after net-zero
-        negative_indices = np.where((net_emissions < 0) & (years_array > net_zero_year))[0]
-        if len(negative_indices) > 0:
-            net_negative_idx = negative_indices[0]
-            net_negative_year = years_array[net_negative_idx]
-
-    # Add annotations if transition points are found
+    # Add annotations if transition points exist
     if net_zero_year:
         fig_co2e.add_annotation(
             x=net_zero_year,
-            y=gcr_co2_ppm[years.index(net_zero_year)],
+            y=gcr_co2[years.index(net_zero_year)],
             text='Net Zero',
             showarrow=True,
             arrowhead=1
@@ -88,7 +91,7 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     if net_negative_year:
         fig_co2e.add_annotation(
             x=net_negative_year,
-            y=gcr_co2_ppm[years.index(net_negative_year)],
+            y=gcr_co2[years.index(net_negative_year)],
             text='Net Negative',
             showarrow=True,
             arrowhead=1
