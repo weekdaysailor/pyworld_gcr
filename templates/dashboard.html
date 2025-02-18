@@ -7,7 +7,19 @@
         <p class="lead">
             Exploring global environmental and societal modeling scenarios through interactive visualization
         </p>
-        <button id="runSimulation" class="btn btn-primary mb-3">Run New Simulation</button>
+        <div class="card mb-3">
+            <div class="card-body">
+                <form id="simulationForm" class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label for="xccPrice" class="form-label">Initial XCC Price ($/tCO2e)</label>
+                        <input type="number" class="form-control" id="xccPrice" name="xccPrice" value="100" min="1" max="1000" step="1">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" id="runSimulation" class="btn btn-primary">Run New Simulation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -59,12 +71,16 @@ document.addEventListener('DOMContentLoaded', function() {
     Plotly.newPlot('pollutionPlot', {{ plots.pollution.data | tojson | safe }}, {{ plots.pollution.layout | tojson | safe }});
     {% endif %}
 
-    // Handle new simulation button
-    document.getElementById('runSimulation').addEventListener('click', function() {
-        this.disabled = true;
-        this.textContent = 'Running...';
+    // Handle simulation form submission
+    document.getElementById('simulationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const xccPrice = document.getElementById('xccPrice').value;
+        const button = document.getElementById('runSimulation');
 
-        fetch('/run')
+        button.disabled = true;
+        button.textContent = 'Running...';
+
+        fetch(`/run?xcc_price=${xccPrice}`)
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -77,8 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('Error running simulation: ' + error);
             })
             .finally(() => {
-                this.disabled = false;
-                this.textContent = 'Run New Simulation';
+                button.disabled = false;
+                button.textContent = 'Run New Simulation';
             });
     });
 });

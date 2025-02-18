@@ -14,16 +14,7 @@ class GCRModel(BaseModel):
                  reward_start_year: int = 2025,
                  initial_reward_value: float = 100.0,
                  target_population: Optional[float] = None):
-        """Initialize the GCR model.
-
-        Args:
-            start_time: Start year for simulation
-            stop_time: End year for simulation
-            dt: Time step for simulation
-            reward_start_year: Year to start implementing GCR policy
-            initial_reward_value: Initial value of carbon reward ($/tCO2e)
-            target_population: Target total population in millions for 2025 (if None, uses default)
-        """
+        """Initialize the GCR model."""
         super().__init__(start_time, stop_time, dt, target_population)
         self.reward_start_year = reward_start_year
         self.initial_reward_value = initial_reward_value
@@ -41,15 +32,19 @@ class GCRModel(BaseModel):
         if year < self.reward_start_year:
             return 0.0
 
-        # Enhanced reward calculation with progressive scaling
+        # More aggressive reward scaling with stronger year-over-year increase
         years_since_start = year - self.reward_start_year
-        base_reward = self.initial_reward_value * (1 + years_since_start * 0.02)  # 2% annual increase
+        base_reward = self.initial_reward_value * (1 + years_since_start * 0.15)  # Increased to 15% annual increase
 
-        # Scale based on both emissions and industrial output with safe float conversion
-        emission_factor = 1.0 + (abs(float(emissions)) / 500)  # More aggressive scaling
-        industrial_factor = 1.0 + (abs(float(industrial_output)) / 1000)
+        # Enhanced scaling factors with stronger response to emissions and industrial output
+        emission_factor = 1.0 + (abs(float(emissions)) / 50)  # More aggressive scaling
+        industrial_factor = 1.0 + (abs(float(industrial_output)) / 100)
 
         reward = float(base_reward * emission_factor * industrial_factor)
+
+        # Cap the maximum reward to prevent instability
+        max_reward = self.initial_reward_value * 20  # Increased cap
+        reward = min(reward, max_reward)
 
         self.reward_history.append({
             'year': float(year),
@@ -66,36 +61,29 @@ class GCRModel(BaseModel):
         # Apply GCR effects with enhanced impact
         for year in range(self.start_time, self.stop_time + 1):
             if year >= self.reward_start_year:
-                # Calculate emissions based on industrial output and pollution with safe float conversion
+                # Calculate emissions based on industrial output and pollution
                 industrial_output = abs(float(results.loc[year, 'industrial_output']))
                 pollution_level = abs(float(results.loc[year, 'persistent_pollution_index']))
-                emissions = industrial_output * (0.5 + pollution_level * 0.1)  # Enhanced emissions calculation
+
+                # Enhanced emissions calculation with stronger pollution feedback
+                emissions = industrial_output * (1.0 + pollution_level * 0.5)  # Increased pollution feedback
 
                 reward = self.calculate_reward(year, emissions, industrial_output)
 
-                # Enhanced impact calculations with stronger effects
-                industrial_modifier = max(0.1, 1.0 - (reward * 0.01))  # 1% reduction per reward unit, minimum 90% reduction
-                pollution_modifier = max(0.1, 1.0 - (reward * 0.015))  # 1.5% reduction per reward unit, minimum 90% reduction
+                # Stronger impact calculations
+                industrial_modifier = max(0.5, 1.0 - (reward * 0.008))  # Increased reduction per reward unit
+                pollution_modifier = max(0.4, 1.0 - (reward * 0.01))   # Increased reduction per reward unit
 
-                # Apply modifiers with temporal delay
-                future_years = range(year, min(year + 5, self.stop_time + 1))
+                # Apply modifiers with cumulative effects
+                future_years = range(year, min(year + 10, self.stop_time + 1))
                 for future_year in future_years:
-                    # Gradual impact that increases over time
-                    time_factor = max(0, 1.0 - (0.2 * (future_year - year)))  # 20% reduction per year
-
+                    time_factor = 1.0 - (0.1 * (future_year - year))  # 10% reduction per year
                     if time_factor > 0:
-                        current_industrial = float(results.loc[future_year, 'industrial_output'])
-                        current_pollution = float(results.loc[future_year, 'persistent_pollution_index'])
-
-                        results.loc[future_year, 'industrial_output'] = current_industrial * (industrial_modifier ** time_factor)
-                        results.loc[future_year, 'persistent_pollution_index'] = current_pollution * (pollution_modifier ** time_factor)
+                        results.loc[future_year, 'industrial_output'] *= industrial_modifier ** time_factor
+                        results.loc[future_year, 'persistent_pollution_index'] *= pollution_modifier ** time_factor
 
         return results
 
     def get_reward_history(self) -> pd.DataFrame:
-        """Get history of carbon rewards and their effects.
-
-        Returns:
-            DataFrame containing reward history
-        """
+        """Get history of carbon rewards and their effects."""
         return pd.DataFrame(self.reward_history)

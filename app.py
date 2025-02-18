@@ -1,5 +1,5 @@
 """Flask application for World3 visualization dashboard."""
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import os
 import logging
 import sys
@@ -26,10 +26,12 @@ def health_check():
     """Simple health check endpoint."""
     return jsonify({"status": "healthy"}), 200
 
-def run_simulations():
+def run_simulations(xcc_price=100.0):
     """Run both baseline and GCR simulations."""
     try:
         logger.info("Starting simulations...")
+        logger.info(f"Using XCC price: {xcc_price}")
+
         # Run baseline simulation
         baseline_model = BaseModel(
             start_time=2025,
@@ -41,12 +43,13 @@ def run_simulations():
         baseline_results = baseline_model.run_simulation()
         logger.info("Baseline simulation complete")
 
-        # Run GCR simulation
+        # Run GCR simulation with specified XCC price
         gcr_model = GCRModel(
             start_time=2025,
             stop_time=2125,
             dt=0.5,
             reward_start_year=2025,
+            initial_reward_value=xcc_price,
             target_population=8000
         )
         logger.info("Running GCR simulation...")
@@ -91,10 +94,11 @@ def dashboard():
 
 @app.route('/run')
 def run_new_simulation():
-    """Run a new simulation and return updated plots."""
+    """Run a new simulation with specified XCC price and return updated plots."""
     try:
-        logger.info("Received request to run new simulation")
-        if run_simulations():
+        xcc_price = float(request.args.get('xcc_price', 100))
+        logger.info(f"Received request to run new simulation with XCC price: {xcc_price}")
+        if run_simulations(xcc_price):
             return jsonify({'status': 'success', 'message': 'Simulation completed successfully'})
         return jsonify({'status': 'error', 'message': 'Failed to run simulations'}), 500
     except Exception as e:

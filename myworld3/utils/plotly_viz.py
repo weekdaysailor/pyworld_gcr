@@ -18,21 +18,21 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     """
     figures = {}
 
-    # Convert index to Python list and ensure data is JSON serializable
-    time_gcr = [float(x) for x in gcr_results.index]
-    time_baseline = [float(x) for x in baseline_results.index]
+    # Convert DataFrames to ensure JSON serializable values
+    def convert_series(series):
+        return [float(x) if isinstance(x, (np.floating, np.integer)) else x for x in series]
 
     # Population comparison
     fig_pop = go.Figure()
     fig_pop.add_trace(go.Scatter(
-        x=time_gcr,
-        y=[float(y) for y in gcr_results['population']],
+        x=convert_series(gcr_results.index - 2025),  # Years from 2025
+        y=convert_series(gcr_results['population'] / 1000),  # Convert to billions
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_pop.add_trace(go.Scatter(
-        x=time_baseline,
-        y=[float(y) for y in baseline_results['population']],
+        x=convert_series(baseline_results.index - 2025),
+        y=convert_series(baseline_results['population'] / 1000),
         name='Baseline',
         line=dict(color='red', dash='dash')
     ))
@@ -46,23 +46,19 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
         template='plotly_white',
         showlegend=True
     )
-    # Convert x-axis to years from start and y-axis to billions
-    for trace in fig_pop.data:
-        trace.x = [x - 2025 for x in trace.x]
-        trace.y = [y / 1000 for y in trace.y]
     figures['population'] = fig_pop.to_dict()
 
     # Industrial output comparison
     fig_ind = go.Figure()
     fig_ind.add_trace(go.Scatter(
-        x=[x - 2025 for x in time_gcr],
-        y=[float(y) for y in gcr_results['industrial_output']],
+        x=convert_series(gcr_results.index - 2025),
+        y=convert_series(gcr_results['industrial_output']),
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_ind.add_trace(go.Scatter(
-        x=[x - 2025 for x in time_baseline],
-        y=[float(y) for y in baseline_results['industrial_output']],
+        x=convert_series(baseline_results.index - 2025),
+        y=convert_series(baseline_results['industrial_output']),
         name='Baseline',
         line=dict(color='red', dash='dash')
     ))
@@ -80,14 +76,14 @@ def create_simulation_dashboard(gcr_results: pd.DataFrame, baseline_results: pd.
     # Pollution comparison
     fig_pol = go.Figure()
     fig_pol.add_trace(go.Scatter(
-        x=[x - 2025 for x in time_gcr],
-        y=[float(y) for y in gcr_results['persistent_pollution_index']],
+        x=convert_series(gcr_results.index - 2025),
+        y=convert_series(gcr_results['persistent_pollution_index']),
         name='GCR Scenario',
         line=dict(color='blue')
     ))
     fig_pol.add_trace(go.Scatter(
-        x=[x - 2025 for x in time_baseline],
-        y=[float(y) for y in baseline_results['persistent_pollution_index']],
+        x=convert_series(baseline_results.index - 2025),
+        y=convert_series(baseline_results['persistent_pollution_index']),
         name='Baseline',
         line=dict(color='red', dash='dash')
     ))
