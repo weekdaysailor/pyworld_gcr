@@ -91,6 +91,41 @@ class GCRModel(BaseModel):
             print(f"Error calculating reward: {str(e)}")
             return 0.0
 
+    def apply_gcr_effects(self, results: pd.DataFrame, year: int, reward: float) -> None:
+        """Apply GCR policy effects to various model parameters."""
+        try:
+            # Calculate impact modifiers based on reward
+            industrial_modifier = max(0.85, 1.0 - (reward * 0.001))  # Stronger impact on industry
+            pollution_modifier = max(0.80, 1.0 - (reward * 0.002))   # Even stronger impact on pollution
+            food_modifier = max(0.95, 1.0 - (reward * 0.0005))      # Gentle impact on food production
+            service_modifier = max(0.90, 1.0 - (reward * 0.0008))   # Moderate impact on services
+
+            # Apply modifiers with varying time horizons
+            future_years = range(year, min(year + 5, self.stop_time + 1))
+            for future_year in future_years:
+                time_factor = 1.0 - (0.2 * (future_year - year))  # 20% reduction per year
+                if time_factor > 0:
+                    # Update industrial output
+                    results.loc[future_year, 'industrial_output'] *= industrial_modifier ** time_factor
+
+                    # Update pollution index with stronger effect
+                    results.loc[future_year, 'persistent_pollution_index'] *= pollution_modifier ** time_factor
+
+                    # Update food per capita (affected by both industrial capacity and pollution)
+                    results.loc[future_year, 'food_per_capita'] *= food_modifier ** time_factor
+
+                    # Update service output (affected by industrial capacity)
+                    results.loc[future_year, 'service_output_per_capita'] *= service_modifier ** time_factor
+
+                    # Recalculate life expectancy based on modified pollution and services
+                    base_life_expectancy = results.loc[future_year, 'life_expectancy']
+                    pollution_effect = 1.0 - (0.05 * (1.0 - pollution_modifier))  # Up to 5% reduction
+                    service_effect = 1.0 + (0.02 * (1.0 - service_modifier))     # Up to 2% increase
+                    results.loc[future_year, 'life_expectancy'] = base_life_expectancy * pollution_effect * service_effect
+
+        except Exception as e:
+            print(f"Error applying GCR effects: {str(e)}")
+
     def run_simulation(self) -> pd.DataFrame:
         """Run World3 simulation with GCR policy effects."""
         try:
@@ -118,28 +153,7 @@ class GCRModel(BaseModel):
                 if year >= self.reward_start_year:
                     # Calculate and apply GCR effects
                     reward = self.calculate_reward(year, co2e_emissions, industrial_output, emission_intensity)
-
-                    # Calculate impact modifiers based on reward
-                    industrial_modifier = max(0.9, 1.0 - (reward * 0.0005))  # Gentler impact on output
-                    intensity_modifier = max(0.85, 1.0 - (reward * 0.001))   # Stronger impact on intensity
-
-                    # Apply modifiers with shorter-term effects (3 years)
-                    future_years = range(year, min(year + 3, self.stop_time + 1))
-                    for future_year in future_years:
-                        time_factor = 1.0 - (0.3 * (future_year - year))  # 30% reduction per year
-                        if time_factor > 0:
-                            # Update industrial output
-                            results.loc[future_year, 'industrial_output'] *= industrial_modifier ** time_factor
-
-                            # Update emission intensity
-                            results.loc[future_year, 'emission_intensity'] *= intensity_modifier ** time_factor
-
-                            # Recalculate CO2e emissions with updated values
-                            results.loc[future_year, 'co2e_emissions'] = self.calculate_co2e_emissions(
-                                results.loc[future_year, 'industrial_output'],
-                                results.loc[future_year, 'emission_intensity'],
-                                results.loc[future_year, 'persistent_pollution_index']
-                            )
+                    self.apply_gcr_effects(results, year, reward)
 
             return results
         except Exception as e:
